@@ -1,0 +1,12 @@
+import { useState, type ReactNode } from 'react';
+import { noteTimes, setTimeline, timelineNotes, type Data, type Note } from './model';
+export function TimelineSetting({note,data,update}: {note: Note; data: Data; update: (data: Data) => void}) {
+ const enabled=Object.hasOwn(data.timeline ?? {},note.id), time=data.timeline?.[note.id] ?? null;
+ const candidates=noteTimes(data,note);
+ return <details className="timeline-setting"><summary>{enabled ? `タイムライン：${time ?? '時刻不明'}` : 'タイムラインに表示'}</summary><label><input type="checkbox" checked={enabled} onChange={event=>update(setTimeline(data,note.id,event.target.checked))}/>タイムラインに表示</label>{enabled && <><label>基準時刻<input type="time" aria-label="タイムラインの基準時刻" value={time ?? ''} onChange={event=>update(setTimeline(data,note.id,true,event.target.value || null))}/></label>{candidates.length>1 && <p>複数の時刻があります。並べる基準を選んでください。</p>}<div className="time-candidates">{candidates.map(value=><button key={value} type="button" aria-pressed={time===value} onClick={()=>update(setTimeline(data,note.id,true,value))}>{value}</button>)}<button type="button" onClick={()=>update(setTimeline(data,note.id,true,null))}>時刻不明にする</button></div></>}</details>;
+}
+export function Timeline({data,update,render}: {data: Data; update: (data: Data) => void; render: (text: string) => ReactNode}) {
+ const [search,setSearch]=useState('');
+ const notes=timelineNotes(data).filter(note=>note.text.toLocaleLowerCase().includes(search.toLocaleLowerCase()));
+ return <main className="workspace timeline-panel" tabIndex={0} aria-label="タイムライン"><div className="list-heading"><h2>タイムライン <span>{notes.length}</span></h2><input type="search" aria-label="タイムラインを検索" placeholder="メモを検索" value={search} onChange={event=>setSearch(event.target.value)}/></div><p className="order-hint">時刻順 · 同時刻は整理順 · 時刻不明は末尾</p>{!notes.length && <p className="muted">{Object.keys(data.timeline ?? {}).length ? '該当するメモはありません。' : 'メモの「タイムラインに表示」から、載せるメモを選んでください。'}</p>}<div className="timeline-list">{notes.map(note=><article key={note.id}><div className="timeline-time">{data.timeline?.[note.id] ?? '時刻不明'}</div><div className="note-body">{render(note.text)}</div><TimelineSetting note={note} data={data} update={update}/></article>)}</div></main>;
+}
