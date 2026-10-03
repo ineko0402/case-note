@@ -180,3 +180,9 @@ test('memo diagram places unique missing cards and preserves existing cards and 
  const data={...emptyData,board:{cards:[{word:'A',x:20,y:30}],viewport:{x:0,y:0,zoom:1}},links:[{id:'l',a:'A',b:'B',status:'confirmed' as const}]};
  const next=placeMemoWords(data,['A','B','B','C']);assert.equal(next.board.cards.length,3);assert.deepEqual(next.board.cards[0],data.board.cards[0]);assert.deepEqual(next.links,data.links);assert.deepEqual(placeMemoWords(next,['B','C']).board,next.board);assert.ok(next.board.cards[1].x>20);assert.deepEqual(data.board.cards,[{word:'A',x:20,y:30}]);
 });
+
+import { addTimelineNotes } from './model.ts';
+test('bulk timeline selection adds only selected notes and preserves existing reference times',()=>{
+ const notes=['a','b','c'].map(id=>({id,text:'本文',createdAt:'2026-10-03T00:00:00Z'}));const data={...emptyData,notes,timeline:{a:'10:00'}};
+ const next=addTimelineNotes(data,[{id:'a',time:'08:00'},{id:'b',time:null}]);assert.deepEqual(next.timeline,{a:'10:00',b:null});assert.deepEqual(next.notes,data.notes);assert.deepEqual(validateData(next),next);assert.throws(()=>addTimelineNotes(data,[{id:'b',time:'25:00'}]));assert.deepEqual(data.timeline,{a:'10:00'});
+});

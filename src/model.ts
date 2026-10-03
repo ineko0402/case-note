@@ -202,3 +202,7 @@ export function placeMemoWords(data: Data, words: string[]): Data {
  const missing = unique.filter(word => !data.board.cards.some(card => card.word === word));
  return { ...data, board: { ...data.board, cards: [...data.board.cards, ...missing.map((word, index) => ({word, x: startX + index % 3 * 240, y: 40 + Math.floor(index / 3) * 130}))] } };
 }
+
+export function addTimelineNotes(data: Data, entries: { id: string; time: string | null }[]): Data {
+ return entries.reduce((next, entry) => Object.hasOwn(next.timeline ?? {}, entry.id) ? next : setTimeline(next, entry.id, true, entry.time), data);
+}
