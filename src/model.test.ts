@@ -117,3 +117,25 @@ test('board context includes co-occurring and directly linked keywords without i
   assert.equal(contextWords(data, null), null);
   assert.equal(data.links.length, 1);
 });
+
+import { renameKeyword, replaceKeyword } from './model.ts';
+test('renaming updates complete tokens and all references while keeping positions and order', () => {
+  const data = { ...emptyData, notes: [{id:'n',text:'宿泊室A *宿泊室A\n*宿泊室AB *宿泊室A *宿泊室A。',createdAt:'2026-10-03T00:00:00Z'}], draft:'*宿泊室A 本文', categories:{宿泊室A:'場所'},keywordOrder:['宿泊室A','宿泊室AB'],noteOrder:['n'],links:[{id:'l',a:'宿泊室A',b:'1',status:'confirmed' as const}],groups:[{id:'g',name:'北側',category:'場所',members:['宿泊室A'],collapsed:false}],board:{cards:[{word:'宿泊室A',x:20,y:30}],viewport:{x:10,y:20,zoom:1}} };
+  const next=renameKeyword(data,'宿泊室A','1F北側宿泊室A');
+  assert.equal(next.notes[0].text,'宿泊室A *1F北側宿泊室A\n*宿泊室AB *1F北側宿泊室A *宿泊室A。');
+  assert.equal(next.draft,'*1F北側宿泊室A 本文');
+  assert.deepEqual(next.categories,{'1F北側宿泊室A':'場所'});
+  assert.deepEqual(next.keywordOrder,['1F北側宿泊室A','宿泊室AB']);
+  assert.deepEqual(next.links,[{id:'l',a:'1F北側宿泊室A',b:'1',status:'confirmed'}]);
+  assert.deepEqual(next.groups[0].members,['1F北側宿泊室A']);
+  assert.deepEqual(next.board.cards,[{word:'1F北側宿泊室A',x:20,y:30}]);
+  assert.deepEqual(next.board.viewport,data.board.viewport);
+  assert.deepEqual(validateData(next),next);
+  assert.equal(data.notes[0].text.includes('*1F'),false);
+  assert.equal(replaceKeyword('*A *A+B *A','A+B','$&'),'*A *$& *A');
+});
+test('renaming rejects invalid names and collisions including draft-only keywords', () => {
+  const data={...emptyData,notes:[{id:'n',text:'*A *B',createdAt:'2026-10-03T00:00:00Z'}],draft:'*C'};
+  for(const name of ['','A','B','C',' A','A B','A\nB','*D']) assert.throws(()=>renameKeyword(data,'A',name));
+  assert.throws(()=>renameKeyword(data,'missing','D'));
+});

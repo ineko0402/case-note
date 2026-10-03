@@ -115,3 +115,24 @@ export function contextWords(data: Data, word: string | null): Set<string> | nul
   data.links.filter(link => link.a === word || link.b === word).forEach(link => { result.add(link.a); result.add(link.b); });
   return result;
 }
+
+/** Replace only complete explicit keyword tokens; ordinary prose stays unchanged. */
+export function replaceKeyword(text: string, word: string, next: string): string {
+  return text.replace(/(^|\s)\*([^\s*]+)/gu, (token, prefix: string, found: string) => found === word ? prefix + '*' + next : token);
+}
+export function renameKeyword(data: Data, word: string, next: string): Data {
+  if (!next || /[\s*]/u.test(next)) throw new Error('名前に空白や * は使えません。');
+  if (next === word) throw new Error('新しい名前を入力してください。');
+  const registered = new Set([...data.notes.flatMap(note => keywords(note.text)), ...keywords(data.draft), ...Object.keys(data.categories), ...data.keywordOrder, ...data.links.flatMap(link => [link.a, link.b]), ...data.groups.flatMap(group => group.members), ...data.board.cards.map(card => card.word)]);
+  if (registered.has(next)) throw new Error('登録済みの名前です。別の名前を入力してください。');
+  if (!registered.has(word)) throw new Error('変更するキーワードが見つかりません。');
+  return { ...data,
+    notes: data.notes.map(note => ({ ...note, text: replaceKeyword(note.text, word, next) })),
+    draft: replaceKeyword(data.draft, word, next),
+    categories: Object.fromEntries(Object.entries(data.categories).map(([key, category]) => [key === word ? next : key, category])),
+    keywordOrder: data.keywordOrder.map(item => item === word ? next : item),
+    links: data.links.map(link => ({ ...link, a: link.a === word ? next : link.a, b: link.b === word ? next : link.b })),
+    groups: data.groups.map(group => ({ ...group, members: group.members.map(item => item === word ? next : item) })),
+    board: { ...data.board, cards: data.board.cards.map(card => card.word === word ? { ...card, word: next } : card) }
+  };
+}
