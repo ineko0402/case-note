@@ -102,3 +102,16 @@ export function placeCard(data: Data, word: string, x: number, y: number): Data 
 export function removeCard(data: Data, word: string): Data {
   return { ...data, board: { ...data.board, cards: data.board.cards.filter(card => card.word !== word) } };
 }
+
+export function classifyUnassigned(data: Data, words: string[], category: string): Data {
+  if (category === '未分類' || !data.categoryOrder.includes(category)) return data;
+  return [...new Set(words)].reduce((next, word) => (next.categories[word] ?? '未分類') === '未分類' ? changeKeywordCategory(next, word, category) : next, data);
+}
+
+export function contextWords(data: Data, word: string | null): Set<string> | null {
+  if (!word) return null;
+  const result = new Set([word]);
+  data.notes.filter(note => keywords(note.text).includes(word)).forEach(note => keywords(note.text).forEach(item => result.add(item)));
+  data.links.filter(link => link.a === word || link.b === word).forEach(link => { result.add(link.a); result.add(link.b); });
+  return result;
+}
