@@ -139,3 +139,18 @@ test('renaming rejects invalid names and collisions including draft-only keyword
   for(const name of ['','A','B','C',' A','A B','A\nB','*D']) assert.throws(()=>renameKeyword(data,'A',name));
   assert.throws(()=>renameKeyword(data,'missing','D'));
 });
+
+import { keywordCounts, sortCategory, addNumbers, numberCandidates } from './model.ts';
+test('category sort is numeric, stable for equal times, and preserves other categories', () => {
+ const data={...emptyData,registeredWords:['10','2','1','0900','09:00','0800','2500','名前'],categories:{'10':'ナンバー','2':'ナンバー','1':'ナンバー','0900':'時間','09:00':'時間','0800':'時間','2500':'時間','名前':'人物'},keywordOrder:['10','名前','2','1','0900','09:00','2500','0800']};
+ const numbers=sortCategory(data,'ナンバー');assert.deepEqual(numbers.keywordOrder,['1','名前','2','10','0900','09:00','2500','0800']);
+ assert.deepEqual(sortCategory(numbers,'時間').keywordOrder,['1','名前','2','10','0800','0900','09:00','2500']);assert.deepEqual(data.keywordOrder,['10','名前','2','1','0900','09:00','2500','0800']);
+});
+test('bulk numbers skip existing keywords without reclassifying and survive backup and rename', () => {
+ const data={...emptyData,notes:[{id:'n',text:'*2',createdAt:'2026-10-03T00:00:00Z'}],categories:{'2':'人物'},draft:'*3'};
+ assert.deepEqual(numberCandidates(data,1,4),{added:['1','4'],skipped:2});
+ const next=addNumbers(data,1,4);assert.equal(next.categories['2'],'人物');assert.equal(keywordCounts(next).get('1'),0);assert.equal(keywordCounts(next).get('2'),1);
+ assert.deepEqual(validateData(next),next);assert.deepEqual(renameKeyword(next,'1','01').registeredWords,['01','4']);assert.deepEqual(keywordCounts(validateData(data)),new Map([['2',1]]));
+ for(const [start,end] of [[2,1],[-1,4],[1,1001],[1.5,3],[NaN,3]]) assert.throws(()=>numberCandidates(data,start,end));
+ assert.throws(()=>validateData({...next,registeredWords:['1','1']}));assert.throws(()=>validateData({...next,registeredWords:['bad word']}));
+});
