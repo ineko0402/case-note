@@ -1,7 +1,7 @@
 export const categories = ['未分類', 'ナンバー', '人物', '場所', 'アイテム', '時間', 'その他'];
 export type Note = { id: string; text: string; createdAt: string };
-export type Data = { version: 2; notes: Note[]; categories: Record<string, string>; draft: string; categoryOrder: string[]; keywordOrder: string[]; collapsed: string[] };
-export const emptyData: Data = { version: 2, notes: [], categories: {}, draft: '', categoryOrder: [...categories], keywordOrder: [], collapsed: [] };
+export type Data = { version: 2; notes: Note[]; categories: Record<string, string>; draft: string; categoryOrder: string[]; keywordOrder: string[]; collapsed: string[]; noteOrder: string[] };
+export const emptyData: Data = { version: 2, notes: [], categories: {}, draft: '', categoryOrder: [...categories], keywordOrder: [], collapsed: [], noteOrder: [] };
 export function keywords(text: string): string[] {
   return [...new Set([...text.matchAll(/(?:^|\s)\*([^\s*]+)/gu)].map(match => match[1]))];
 }
@@ -39,5 +39,16 @@ export function validateData(value: unknown): Data {
   const validList = (list: unknown): list is string[] => Array.isArray(list) && list.every(item => typeof item === 'string' && item.trim() === item && item.length > 0) && new Set(list).size === list.length;
   if (!validList(order) || order[0] !== '未分類' || Object.values(data.categories).some(category => !order.includes(category))) throw new Error('分類の形式が違います。');
   if (!legacy && (!validList(data.keywordOrder) || !validList(data.collapsed) || data.collapsed.some(category => !order.includes(category)))) throw new Error('並び順の形式が違います。');
-  return { version: 2, notes: data.notes, categories: Object.fromEntries(Object.entries(data.categories)), draft: data.draft, categoryOrder: order, keywordOrder: legacy ? [] : data.keywordOrder, collapsed: legacy ? [] : data.collapsed };
+  if (data.noteOrder !== undefined && !validList(data.noteOrder)) throw new Error('メモの並び順が違います。');
+  return { version: 2, notes: data.notes, categories: Object.fromEntries(Object.entries(data.categories)), draft: data.draft, categoryOrder: order, keywordOrder: legacy ? [] : data.keywordOrder, collapsed: legacy ? [] : data.collapsed, noteOrder: data.noteOrder ?? [] };
+}
+
+export function moveRelative<T>(items: T[], from: T, to: T, after: boolean): T[] {
+  if (from === to || !items.includes(from) || !items.includes(to)) return items;
+  const result = items.filter(item => item !== from);
+  result.splice(result.indexOf(to) + (after ? 1 : 0), 0, from);
+  return result;
+}
+export function completeOrder(order: string[], ids: string[]): string[] {
+  return [...order.filter(id => ids.includes(id)), ...ids.filter(id => !order.includes(id))];
 }
