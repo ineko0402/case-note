@@ -154,3 +154,14 @@ test('bulk numbers skip existing keywords without reclassifying and survive back
  for(const [start,end] of [[2,1],[-1,4],[1,1001],[1.5,3],[NaN,3]]) assert.throws(()=>numberCandidates(data,start,end));
  assert.throws(()=>validateData({...next,registeredWords:['1','1']}));assert.throws(()=>validateData({...next,registeredWords:['bad word']}));
 });
+
+import { noteTimes, setTimeline, timelineNotes } from './model.ts';
+test('timeline is opt-in, inserts late early events, preserves ties and keeps unknowns last', () => {
+ const data={...emptyData,notes:[{id:'a',text:'*1000',createdAt:'2026-10-03T00:00:00Z'},{id:'b',text:'*0900',createdAt:'2026-10-03T00:00:00Z'},{id:'c',text:'*0900 *1000',createdAt:'2026-10-03T00:00:00Z'},{id:'d',text:'*0900',createdAt:'2026-10-03T00:00:00Z'}],categories:{'1000':'時間','0900':'時間'},noteOrder:['d','a','b','c']};
+ assert.deepEqual(timelineNotes(data),[]);assert.deepEqual(noteTimes(data,data.notes[2]),['09:00','10:00']);
+ let next=setTimeline(setTimeline(setTimeline(setTimeline(data,'a',true),'b',true),'c',true),'d',true);
+ assert.equal(next.timeline?.c,null);assert.deepEqual(timelineNotes(next).map(n=>n.id),['d','b','a','c']);
+ next=setTimeline(next,'c',true,'08:00');assert.deepEqual(timelineNotes(next).map(n=>n.id),['c','d','b','a']);
+ assert.deepEqual(validateData(next),next);assert.deepEqual(setTimeline(next,'c',false).timeline,{a:'10:00',b:'09:00',d:'09:00'});
+ assert.deepEqual(data.noteOrder,['d','a','b','c']);assert.throws(()=>setTimeline(next,'a',true,'25:00'));assert.throws(()=>validateData({...next,timeline:{missing:'09:00'}}));assert.throws(()=>validateData({...next,timeline:{a:'0900'}}));
+});

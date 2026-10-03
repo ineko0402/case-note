@@ -4,7 +4,7 @@ export type Link = { id: string; a: string; b: string; status: 'tentative' | 'co
 export type Group = { id: string; name: string; category: string; members: string[]; collapsed: boolean };
 export type BoardCard = { word: string; x: number; y: number };
 export type Board = { cards: BoardCard[]; viewport: { x: number; y: number; zoom: number } };
-export type Data = { registeredWords?: string[]; version: 4; notes: Note[]; categories: Record<string, string>; draft: string; categoryOrder: string[]; keywordOrder: string[]; collapsed: string[]; noteOrder: string[]; links: Link[]; groups: Group[]; board: Board };
+export type Data = { timeline?: Record<string, string | null>; registeredWords?: string[]; version: 4; notes: Note[]; categories: Record<string, string>; draft: string; categoryOrder: string[]; keywordOrder: string[]; collapsed: string[]; noteOrder: string[]; links: Link[]; groups: Group[]; board: Board };
 export const emptyData: Data = { version: 4, notes: [], categories: {}, draft: '', categoryOrder: [...categories], keywordOrder: [], collapsed: [], noteOrder: [], links: [], groups: [], board: { cards: [], viewport: { x: 0, y: 0, zoom: 1 } } };
 export function keywords(text: string): string[] {
   return [...new Set([...text.matchAll(/(?:^|\s)\*([^\s*]+)/gu)].map(match => match[1]))];
@@ -38,6 +38,7 @@ export function validateData(value: unknown): Data {
     if (!note || typeof note.id !== 'string' || ids.has(note.id) || typeof note.text !== 'string' || typeof note.createdAt !== 'string' || !Number.isFinite(Date.parse(note.createdAt))) throw new Error('メモの形式が違います。');
     ids.add(note.id);
   }
+  if (data.timeline !== undefined && (!data.timeline || typeof data.timeline !== 'object' || Array.isArray(data.timeline) || Object.entries(data.timeline).some(([id, time]) => !ids.has(id) || (time !== null && (typeof time !== 'string' || !/^(?:[01]\d|2[0-3]):[0-5]\d$/u.test(time)))))) throw new Error('タイムラインの形式が違います。');
   const legacy = (data.version as number) === 1;
   const order = legacy ? [...categories] : data.categoryOrder;
   const validList = (list: unknown): list is string[] => Array.isArray(list) && list.every(item => typeof item === 'string' && item.trim() === item && item.length > 0) && new Set(list).size === list.length;
@@ -68,7 +69,7 @@ export function validateData(value: unknown): Data {
     if (!card || typeof card.word !== 'string' || !card.word || /[\s*]/u.test(card.word) || boardWords.has(card.word) || !Number.isFinite(card.x) || !Number.isFinite(card.y)) throw new Error('カードの形式が違います。');
     boardWords.add(card.word);
   }
-  return { ...(data.registeredWords !== undefined ? { registeredWords: data.registeredWords } : {}), version: 4, notes: data.notes, categories: Object.fromEntries(Object.entries(data.categories)), draft: data.draft, categoryOrder: order, keywordOrder: legacy ? [] : data.keywordOrder, collapsed: legacy ? [] : data.collapsed, noteOrder: data.noteOrder ?? [], links, groups, board };
+  return { ...(data.timeline !== undefined ? { timeline: data.timeline } : {}), ...(data.registeredWords !== undefined ? { registeredWords: data.registeredWords } : {}), version: 4, notes: data.notes, categories: Object.fromEntries(Object.entries(data.categories)), draft: data.draft, categoryOrder: order, keywordOrder: legacy ? [] : data.keywordOrder, collapsed: legacy ? [] : data.collapsed, noteOrder: data.noteOrder ?? [], links, groups, board };
 }
 
 export function moveRelative<T>(items: T[], from: T, to: T, after: boolean): T[] {
@@ -170,4 +171,22 @@ export function addNumbers(data: Data, start: number, end: number): Data {
   if (!data.categoryOrder.includes('ナンバー')) throw new Error('分類「ナンバー」を分類設定で追加してください。');
   const { added } = numberCandidates(data, start, end);
   return { ...data, registeredWords: [...(data.registeredWords ?? []), ...added], categories: {...data.categories, ...Object.fromEntries(added.map(word => [word, 'ナンバー']))} };
+}
+
+export function noteTimes(data: Data, note: Note): string[] {
+ return [...new Set(keywords(note.text).filter(word => data.categories[word] === '時間').map(word => categorySortValue(word, '時間')).filter(Number.isFinite).map(value => String(Math.floor(value / 60)).padStart(2, '0') + ':' + String(value % 60).padStart(2, '0')))];
+}
+export function setTimeline(data: Data, id: string, enabled: boolean, time?: string | null): Data {
+ const note = data.notes.find(note => note.id === id); if (!note) return data;
+ const timeline = { ...data.timeline };
+ if (!enabled) delete timeline[id];
+ else { const candidates = noteTimes(data, note); const next = time === undefined ? candidates.length === 1 ? candidates[0] : null : time;
+ if (next !== null && !/^(?:[01]\d|2[0-3]):[0-5]\d$/u.test(next)) throw new Error('時刻をHH:MM形式で指定してください。'); Object.defineProperty(timeline, id, { value: next, enumerable: true, configurable: true, writable: true }); }
+ return { ...data, timeline };
+}
+export function timelineNotes(data: Data): Note[] {
+ const ids = completeOrder(data.noteOrder, data.notes.map(note => note.id));
+ return ids.map(id => data.notes.find(note => note.id === id)!).filter(note => Object.hasOwn(data.timeline ?? {}, note.id)).sort((a,b) => {
+ const av=data.timeline?.[a.id] ?? '99:99', bv=data.timeline?.[b.id] ?? '99:99';return av < bv ? -1 : av > bv ? 1 : 0;
+ });
 }
