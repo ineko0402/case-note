@@ -1,11 +1,14 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
-import { emptyData, keywords, moveBefore, moveRelative, completeOrder, validateData, type Data } from './model';
+import { emptyData, keywords, connect, changeKeywordCategory, moveRelative, completeOrder, validateData, type Data } from './model';
 import { load, save } from './storage';
 import './style.css';
 import { KeywordEditor } from './KeywordEditor';
 import { CategorySettings } from './CategorySettings';
 import { useDragOrder } from './useDragOrder';
+import { KeywordConnections, ConnectionPicker } from './KeywordConnections';
+import { GroupSettings } from './GroupSettings';
+import { KeywordCategory } from './KeywordCategory';
 
 function App() {
   const [data, setData] = useState<Data>(emptyData);
@@ -20,6 +23,10 @@ function App() {
   const [editText, setEditText] = useState('');
   const file = useRef<HTMLInputElement>(null);
   const [settings, setSettings] = useState(false);
+  const [groupCategory, setGroupCategory] = useState<string | null>(null);
+  const [linkSource, setLinkSource] = useState<string | null>(null);
+  const groupDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => { if (groupCategory) groupDialog.current?.showModal(); }, [groupCategory]);
   const settingsDialog = useRef<HTMLDialogElement>(null);
   useEffect(() => { if (settings) settingsDialog.current?.showModal(); }, [settings]);
   const notesPanel = useRef<HTMLDivElement>(null);
@@ -47,7 +54,7 @@ function App() {
   const noteIds = completeOrder(data.noteOrder, data.notes.map(note => note.id));
   const organizedNotes = noteIds.map(id => data.notes.find(note => note.id === id)!);
   const notes = (view === 'notes' ? data.notes : organizedNotes).filter(note => (!selected || keywords(note.text).includes(selected)) && note.text.toLocaleLowerCase().includes(search.toLocaleLowerCase()));
-  const dragOrder = useDragOrder((group, from, to, after) => setData(previous => group === 'notes' ? { ...previous, noteOrder: moveRelative(completeOrder(previous.noteOrder, previous.notes.map(note => note.id)), from, to, after) } : { ...previous, keywordOrder: moveRelative(completeOrder(previous.keywordOrder, [...counts.keys()]), from, to, after) }));
+  const dragOrder = useDragOrder((_group, from, to, after) => setData(previous => ({ ...previous, noteOrder: moveRelative(completeOrder(previous.noteOrder, previous.notes.map(note => note.id)), from, to, after) })));
 
   function add(event: FormEvent) {
     event.preventDefault();
@@ -63,29 +70,37 @@ function App() {
     try {
       const imported = validateData(JSON.parse(await upload.text()));
       if (!window.confirm('現在のメモと分類を、バックアップの内容に置き換えます。よろしいですか？')) return;
-      setData(imported); setSelected(null); setEditing(null); setMessage('バックアップを読み込みました。');
+      setData(imported); setSelected(null); setEditing(null); setLinkSource(null); setGroupCategory(null); setMessage('バックアップを読み込みました。');
     } catch { setMessage('読み込めませんでした。Case NoteのJSONバックアップを選んでください。'); }
+  }
+  function selectKeyword(word: string) {
+    if (linkSource) {
+      if (word === linkSource) return;
+      setData(previous => connect(previous, linkSource, word, crypto.randomUUID()));
+      setLinkSource(null);
+      return;
+    }
+    setSelected(word); setView('keywords');
   }
   function rendered(text: string) {
     return text.split(/((?:^|\s)\*[^\s*]+)/gu).map((part, index) => {
       const match = part.match(/^(\s*)\*([^\s*]+)$/u);
-      return match ? <span key={index}>{match[1]}<button className="chip" title={'*' + match[2]} onClick={() => { setSelected(match[2]); setView('keywords'); }}>{'*' + match[2]}</button></span> : part;
+      return match ? <span key={index}>{match[1]}<button className="chip" title={'*' + match[2]} onClick={() => selectKeyword(match[2])}>{'*' + match[2]}</button></span> : part;
     });
   }
   return <div className={'app ' + (view === 'keywords' ? 'keyword-view' : 'memo-view')}>
     <header><div><h1>Case Note</h1><p>手がかりを、そのまま書き留める。</p></div><span className="save-status" role="status">{status}</span></header>
-    <nav aria-label="表示切り替え"><button aria-pressed={view === 'notes'} onClick={() => { setView('notes'); setSelected(null); }}>メモ</button><button aria-pressed={view === 'keywords'} onClick={() => setView('keywords')}>キーワード <span>{counts.size}</span></button></nav>
+    <nav aria-label="表示切り替え"><button aria-pressed={view === 'notes'} onClick={() => { setView('notes'); setSelected(null); setLinkSource(null); }}>メモ</button><button aria-pressed={view === 'keywords'} onClick={() => setView('keywords')}>キーワード <span>{counts.size}</span></button></nav>
     {!ready ? <p>{loadFailed ? 'データを保護するため入力を停止しています。' : 'メモを読み込んでいます。'}</p> : <>
     {settings && <dialog ref={settingsDialog} className="settings-dialog" aria-label="分類設定" onCancel={() => setSettings(false)}><CategorySettings data={data} update={setData} close={() => setSettings(false)}/></dialog>}
+    {groupCategory && <dialog ref={groupDialog} className="settings-dialog" aria-label="まとまり設定" onCancel={() => setGroupCategory(null)}><GroupSettings category={groupCategory} data={data} update={setData} close={() => setGroupCategory(null)}/></dialog>}
     <main className={view === 'keywords' ? 'workspace organizing' : 'workspace'}>
-      {view === 'keywords' && <aside ref={keywordPanel} tabIndex={0} aria-label="キーワード一覧" onScroll={event => { scrollPositions.current.sidebar = event.currentTarget.scrollTop; }}><div className="list-heading"><h2>キーワード</h2><button onClick={() => setSettings(!settings)}>分類設定</button></div><button className="all" aria-pressed={!selected} onClick={() => setSelected(null)}>すべてのメモ <span>{data.notes.length}</span></button>{data.categoryOrder.map(category => {
-        const ordered = keywordIds;
-        const words = ordered.filter(word => (data.categories[word] ?? '未分類') === category);
-        return words.length > 0 && <section key={category}><button className="category-toggle" aria-expanded={!data.collapsed.includes(category)} onClick={() => setData({ ...data, collapsed: data.collapsed.includes(category) ? data.collapsed.filter(item => item !== category) : [...data.collapsed, category] })}><span>{data.collapsed.includes(category) ? '▸' : '▾'} {category}</span><span>{words.length}</span></button>{!data.collapsed.includes(category) && words.map((word, index) => <div key={word} {...dragOrder.row(category, word)} className={'word-row ' + dragOrder.row(category, word).className}><button className="drag-handle" aria-label={`*${word}をドラッグして並べ替え`} {...dragOrder.handle(category, word)}>⠿</button><button className="word" aria-pressed={selected === word} onClick={() => setSelected(word)}><span className="keyword-label" title={'*' + word}>*{word}</span><span>{counts.get(word)}件</span></button><div className="word-moves"><button aria-label={`*${word}を上へ`} disabled={index === 0} onClick={() => setData({ ...data, keywordOrder: moveBefore(ordered, word, words[index - 1]) })}>↑</button><button aria-label={`*${word}を下へ`} disabled={index === words.length - 1} onClick={() => setData({ ...data, keywordOrder: moveBefore(ordered, words[index + 1], word) })}>↓</button></div></div>)}</section>;
-      })}{counts.size === 0 && <p className="muted">メモに *キーワード を書くと、ここに集まります。</p>}</aside>}
+      {view === 'keywords' && <aside ref={keywordPanel} tabIndex={0} aria-label="キーワード一覧" onScroll={event => { scrollPositions.current.sidebar = event.currentTarget.scrollTop; }}><div className="list-heading"><h2>キーワード</h2><button onClick={() => setSettings(!settings)}>分類設定</button></div><button className="all" aria-pressed={!selected} onClick={() => setSelected(null)}>すべてのメモ <span>{data.notes.length}</span></button>{data.categoryOrder.map(category => <KeywordCategory key={category} category={category} data={data} counts={counts} selected={selected} select={selectKeyword} update={setData} settings={() => setGroupCategory(category)}/>)}{counts.size === 0 && <p className="muted">メモに *キーワード を書くと、ここに集まります。</p>}</aside>}
       <div className="notes-panel" ref={notesPanel} tabIndex={0} role="region" aria-label={view === 'notes' ? 'メモ一覧' : '関連メモ一覧'} onScroll={event => { scrollPositions.current[view] = event.currentTarget.scrollTop; }}>
         {view === 'notes' && <form className="composer" onSubmit={add}><label htmlFor="draft">新しいメモ</label><KeywordEditor id="draft" placeholder="文章を書いて選択すると、キーワードにできます" value={data.draft} registered={new Set(counts.keys())} onChange={value => setData({ ...data, draft: value })} onSubmitShortcut={() => add({ preventDefault() {} } as FormEvent)}/><div className="composer-bottom"><small>*から空白までがキーワード</small><button className="primary" disabled={!data.draft.trim()}>追加</button></div></form>}
-        {selected && <div className="selection"><div><h2>*{selected}</h2><span>{counts.get(selected) ?? 0}件のメモ</span></div><label>分類<select value={data.categories[selected] ?? '未分類'} onChange={event => setData({ ...data, categories: { ...data.categories, [selected]: event.target.value } })}>{data.categoryOrder.map(category => <option key={category}>{category}</option>)}</select></label><button onClick={() => setSelected(null)} aria-label="キーワードの絞り込みを解除">解除</button></div>}
+        {selected && <div className="selection"><div><h2>*{selected}</h2><span>{counts.get(selected) ?? 0}件のメモ</span></div><label>分類<select value={data.categories[selected] ?? '未分類'} onChange={event => setData(changeKeywordCategory(data, selected, event.target.value))}>{data.categoryOrder.map(category => <option key={category}>{category}</option>)}</select></label><button onClick={() => setSelected(null)} aria-label="キーワードの絞り込みを解除">解除</button></div>}
+        {linkSource && <ConnectionPicker source={linkSource} words={keywordIds} data={data} update={setData} close={() => setLinkSource(null)}/>}
+        {selected && <KeywordConnections word={selected} data={data} update={setData} select={selectKeyword} begin={() => setLinkSource(selected)} isChoosing={!!linkSource}/>}
         <div className="list-heading"><h2>{selected ? '関連するメモ' : 'メモ'} <span>{notes.length}</span></h2><input aria-label="メモを検索" type="search" placeholder="メモを検索" value={search} onChange={event => setSearch(event.target.value)}/></div>
         {notes.length === 0 && <div className="empty"><p>{data.notes.length ? '該当するメモはありません。' : 'まだメモはありません。'}</p>{!data.notes.length && <p>番号も名前も時間も、まずは別々のキーワードで。<br/>分類や並べ替えは、あとから考えましょう。</p>}</div>}
         <p className="order-hint">{view === 'notes' ? '登録順' : '整理順 · ハンドルをドラッグして並べ替え'}</p>
