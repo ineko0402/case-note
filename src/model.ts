@@ -4,7 +4,7 @@ export type Link = { id: string; a: string; b: string; status: 'tentative' | 'co
 export type Group = { id: string; name: string; category: string; members: string[]; collapsed: boolean };
 export type BoardCard = { word: string; x: number; y: number };
 export type Board = { cards: BoardCard[]; viewport: { x: number; y: number; zoom: number } };
-export type Data = { version: 4; notes: Note[]; categories: Record<string, string>; draft: string; categoryOrder: string[]; keywordOrder: string[]; collapsed: string[]; noteOrder: string[]; links: Link[]; groups: Group[]; board: Board };
+export type Data = { registeredWords?: string[]; version: 4; notes: Note[]; categories: Record<string, string>; draft: string; categoryOrder: string[]; keywordOrder: string[]; collapsed: string[]; noteOrder: string[]; links: Link[]; groups: Group[]; board: Board };
 export const emptyData: Data = { version: 4, notes: [], categories: {}, draft: '', categoryOrder: [...categories], keywordOrder: [], collapsed: [], noteOrder: [], links: [], groups: [], board: { cards: [], viewport: { x: 0, y: 0, zoom: 1 } } };
 export function keywords(text: string): string[] {
   return [...new Set([...text.matchAll(/(?:^|\s)\*([^\s*]+)/gu)].map(match => match[1]))];
@@ -44,6 +44,7 @@ export function validateData(value: unknown): Data {
   if (!validList(order) || order[0] !== '未分類' || Object.values(data.categories).some(category => !order.includes(category))) throw new Error('分類の形式が違います。');
   if (!legacy && (!validList(data.keywordOrder) || !validList(data.collapsed) || data.collapsed.some(category => !order.includes(category)))) throw new Error('並び順の形式が違います。');
   if (data.noteOrder !== undefined && !validList(data.noteOrder)) throw new Error('メモの並び順が違います。');
+  if (data.registeredWords !== undefined && (!validList(data.registeredWords) || data.registeredWords.some(word => /[\s*]/u.test(word)))) throw new Error('登録キーワードの形式が違います。');
   const links = (data.version as number) >= 3 ? data.links : [];
   const groups = (data.version as number) >= 3 ? data.groups : [];
   if (!Array.isArray(links) || !Array.isArray(groups)) throw new Error('結び・まとまりの形式が違います。');
@@ -67,7 +68,7 @@ export function validateData(value: unknown): Data {
     if (!card || typeof card.word !== 'string' || !card.word || /[\s*]/u.test(card.word) || boardWords.has(card.word) || !Number.isFinite(card.x) || !Number.isFinite(card.y)) throw new Error('カードの形式が違います。');
     boardWords.add(card.word);
   }
-  return { version: 4, notes: data.notes, categories: Object.fromEntries(Object.entries(data.categories)), draft: data.draft, categoryOrder: order, keywordOrder: legacy ? [] : data.keywordOrder, collapsed: legacy ? [] : data.collapsed, noteOrder: data.noteOrder ?? [], links, groups, board };
+  return { ...(data.registeredWords !== undefined ? { registeredWords: data.registeredWords } : {}), version: 4, notes: data.notes, categories: Object.fromEntries(Object.entries(data.categories)), draft: data.draft, categoryOrder: order, keywordOrder: legacy ? [] : data.keywordOrder, collapsed: legacy ? [] : data.collapsed, noteOrder: data.noteOrder ?? [], links, groups, board };
 }
 
 export function moveRelative<T>(items: T[], from: T, to: T, after: boolean): T[] {
@@ -123,10 +124,11 @@ export function replaceKeyword(text: string, word: string, next: string): string
 export function renameKeyword(data: Data, word: string, next: string): Data {
   if (!next || /[\s*]/u.test(next)) throw new Error('名前に空白や * は使えません。');
   if (next === word) throw new Error('新しい名前を入力してください。');
-  const registered = new Set([...data.notes.flatMap(note => keywords(note.text)), ...keywords(data.draft), ...Object.keys(data.categories), ...data.keywordOrder, ...data.links.flatMap(link => [link.a, link.b]), ...data.groups.flatMap(group => group.members), ...data.board.cards.map(card => card.word)]);
+  const registered = new Set([...data.notes.flatMap(note => keywords(note.text)), ...keywords(data.draft), ...(data.registeredWords ?? []), ...Object.keys(data.categories), ...data.keywordOrder, ...data.links.flatMap(link => [link.a, link.b]), ...data.groups.flatMap(group => group.members), ...data.board.cards.map(card => card.word)]);
   if (registered.has(next)) throw new Error('登録済みの名前です。別の名前を入力してください。');
   if (!registered.has(word)) throw new Error('変更するキーワードが見つかりません。');
   return { ...data,
+    ...(data.registeredWords ? { registeredWords: data.registeredWords.map(item => item === word ? next : item) } : {}),
     notes: data.notes.map(note => ({ ...note, text: replaceKeyword(note.text, word, next) })),
     draft: replaceKeyword(data.draft, word, next),
     categories: Object.fromEntries(Object.entries(data.categories).map(([key, category]) => [key === word ? next : key, category])),
@@ -135,4 +137,37 @@ export function renameKeyword(data: Data, word: string, next: string): Data {
     groups: data.groups.map(group => ({ ...group, members: group.members.map(item => item === word ? next : item) })),
     board: { ...data.board, cards: data.board.cards.map(card => card.word === word ? { ...card, word: next } : card) }
   };
+}
+
+export function keywordCounts(data: Data): Map<string, number> {
+  const counts = new Map((data.registeredWords ?? []).map(word => [word, 0]));
+  data.notes.forEach(note => keywords(note.text).forEach(word => counts.set(word, (counts.get(word) ?? 0) + 1)));
+  return counts;
+}
+export function categorySortValue(word: string, category: string): number {
+  if (category === 'ナンバー' && /^\d+$/u.test(word) && Number.isSafeInteger(Number(word))) return Number(word);
+  if (category === '時間') {
+    const match = /^(\d{2}):?(\d{2})$/u.exec(word);
+    if (match && Number(match[1]) < 24 && Number(match[2]) < 60) return Number(match[1]) * 60 + Number(match[2]);
+  }
+  return Infinity;
+}
+export function sortCategory(data: Data, category: string): Data {
+  if (!['時間', 'ナンバー'].includes(category)) return data;
+  const order = completeOrder(data.keywordOrder, [...keywordCounts(data).keys()]);
+  const members = order.filter(word => (data.categories[word] ?? '未分類') === category);
+  members.sort((a, b) => { const av = categorySortValue(a, category), bv = categorySortValue(b, category); return av === bv ? 0 : av < bv ? -1 : 1; });
+  let i = 0;
+  return { ...data, keywordOrder: order.map(word => (data.categories[word] ?? '未分類') === category ? members[i++] : word) };
+}
+export function numberCandidates(data: Data, start: number, end: number): { added: string[]; skipped: number } {
+  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end < start || end - start >= 1000) throw new Error('0以上の整数で、開始から終了まで1000個以内を指定してください。');
+  const existing = new Set([...keywordCounts(data).keys(), ...keywords(data.draft), ...Object.keys(data.categories), ...data.keywordOrder, ...data.links.flatMap(link => [link.a, link.b]), ...data.groups.flatMap(group => group.members), ...data.board.cards.map(card => card.word)]);
+  const range = Array.from({length: end - start + 1}, (_, i) => String(start + i));
+  return { added: range.filter(word => !existing.has(word)), skipped: range.filter(word => existing.has(word)).length };
+}
+export function addNumbers(data: Data, start: number, end: number): Data {
+  if (!data.categoryOrder.includes('ナンバー')) throw new Error('分類「ナンバー」を分類設定で追加してください。');
+  const { added } = numberCandidates(data, start, end);
+  return { ...data, registeredWords: [...(data.registeredWords ?? []), ...added], categories: {...data.categories, ...Object.fromEntries(added.map(word => [word, 'ナンバー']))} };
 }

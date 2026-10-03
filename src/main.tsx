@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
-import { emptyData, keywords, connect, changeKeywordCategory, moveRelative, completeOrder, validateData, type Data } from './model';
+import { emptyData, keywordCounts, keywords, connect, changeKeywordCategory, moveRelative, completeOrder, validateData, type Data } from './model';
 import { load, save } from './storage';
 import { KeywordEditor } from './KeywordEditor';
 import { CategorySettings } from './CategorySettings';
@@ -12,6 +12,7 @@ import { RelationshipBoard } from './RelationshipBoard';
 import { KeywordText } from './KeywordText';
 import { BatchClassification } from './BatchClassification';
 import { KeywordRename } from './KeywordRename';
+import { NumberRegistration } from './NumberRegistration';
 import './style.css';
 
 function App() {
@@ -27,6 +28,9 @@ function App() {
   const [renameUndo, setRenameUndo] = useState<{ before: Data; after: Data; from: string; to: string } | null>(null);
   useEffect(() => { if (renaming) renameDialog.current?.showModal(); }, [renaming]);
   useEffect(() => { if (renameUndo && data !== renameUndo.after) setRenameUndo(null); }, [data, renameUndo]);
+  const [numbers, setNumbers] = useState(false);
+  const numbersDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => { if (numbers) numbersDialog.current?.showModal(); }, [numbers]);
   const [batch, setBatch] = useState(false);
   const batchDialog = useRef<HTMLDialogElement>(null);
   useEffect(() => { if (batch) batchDialog.current?.showModal(); }, [batch]);
@@ -60,11 +64,7 @@ function App() {
     const timer = setTimeout(() => { save(data).then(() => { if (active) setStatus('このブラウザに保存済み'); }).catch(() => { if (active) setStatus('保存できません。バックアップを保存してください。'); }); }, 250);
     return () => { active = false; clearTimeout(timer); };
   }, [data, ready]);
-  const counts = useMemo(() => {
-    const result = new Map<string, number>();
-    data.notes.forEach(note => keywords(note.text).forEach(word => result.set(word, (result.get(word) ?? 0) + 1)));
-    return result;
-  }, [data.notes]);
+  const counts = useMemo(() => keywordCounts(data), [data.notes, data.registeredWords]);
   const hasUnclassified = [...counts.keys()].some(word => (data.categories[word] ?? '未分類') === '未分類');
   const keywordIds = completeOrder(data.keywordOrder, [...counts.keys()]);
   const noteIds = completeOrder(data.noteOrder, data.notes.map(note => note.id));
@@ -110,9 +110,10 @@ function App() {
     {renaming && selected && <dialog ref={renameDialog} className="settings-dialog" aria-label="キーワードの名前を変更" onCancel={() => setRenaming(false)}><KeywordRename word={selected} data={data} close={() => setRenaming(false)} apply={(next, name) => { setRenameUndo({ before: data, after: next, from: selected, to: name }); setData(next); if (memoHighlight === selected) setMemoHighlight(name); if (linkSource === selected) setLinkSource(name); setSelected(name); }}/></dialog>}
     {settings && <dialog ref={settingsDialog} className="settings-dialog" aria-label="分類設定" onCancel={() => setSettings(false)}><CategorySettings data={data} update={setData} close={() => setSettings(false)}/></dialog>}
     {groupCategory && <dialog ref={groupDialog} className="settings-dialog" aria-label="まとまり設定" onCancel={() => setGroupCategory(null)}><GroupSettings category={groupCategory} data={data} update={setData} close={() => setGroupCategory(null)}/></dialog>}
+    {numbers && <dialog ref={numbersDialog} className="settings-dialog" aria-label="番号をまとめて追加" onCancel={() => setNumbers(false)}><NumberRegistration data={data} update={setData} close={() => setNumbers(false)}/></dialog>}
     {batch && <dialog ref={batchDialog} className="settings-dialog" aria-label="未分類の一括分類" onCancel={() => setBatch(false)}><BatchClassification data={data} words={keywordIds} update={setData} close={() => setBatch(false)}/></dialog>}
     <main className={view !== 'notes' ? 'workspace organizing' + (showKeywordList ? '' : ' sidebar-collapsed') : 'workspace'}>
-      {view !== 'notes' && showKeywordList && <aside ref={keywordPanel} tabIndex={0} aria-label="キーワード一覧" onScroll={event => { scrollPositions.current.sidebar = event.currentTarget.scrollTop; }}><div className="list-heading"><h2>キーワード</h2><button onClick={() => setSettings(!settings)}>分類設定</button></div>{hasUnclassified && <button className="batch-start" onClick={() => setBatch(true)}>未分類をまとめて分類</button>}<button className="all" aria-pressed={!selected} onClick={() => setSelected(null)}>すべてのメモ <span>{data.notes.length}</span></button>{data.categoryOrder.map(category => <KeywordCategory key={category} category={category} data={data} counts={counts} selected={selected} select={selectKeyword} update={setData} settings={() => setGroupCategory(category)}/>)}{counts.size === 0 && <p className="muted">メモに *キーワード を書くと、ここに集まります。</p>}</aside>}
+      {view !== 'notes' && showKeywordList && <aside ref={keywordPanel} tabIndex={0} aria-label="キーワード一覧" onScroll={event => { scrollPositions.current.sidebar = event.currentTarget.scrollTop; }}><div className="list-heading"><h2>キーワード</h2><button onClick={() => setSettings(!settings)}>分類設定</button></div>{data.categoryOrder.includes('ナンバー') && <button className="batch-start" onClick={() => setNumbers(true)}>番号をまとめて追加</button>}{hasUnclassified && <button className="batch-start" onClick={() => setBatch(true)}>未分類をまとめて分類</button>}<button className="all" aria-pressed={!selected} onClick={() => setSelected(null)}>すべてのメモ <span>{data.notes.length}</span></button>{data.categoryOrder.map(category => <KeywordCategory key={category} category={category} data={data} counts={counts} selected={selected} select={selectKeyword} update={setData} settings={() => setGroupCategory(category)}/>)}{counts.size === 0 && <p className="muted">メモに *キーワード を書くと、ここに集まります。</p>}</aside>}
       <div className="organize-content">
         {view !== 'notes' && <div className="context-header" aria-label="選択キーワードと結び">        {selected && <div className="selection"><div><span className="keyword-kind">キーワード</span><h2>*{selected}</h2><span>{counts.get(selected) ?? 0}件のメモ</span></div><label>分類<select value={data.categories[selected] ?? '未分類'} onChange={event => setData(changeKeywordCategory(data, selected, event.target.value))}>{data.categoryOrder.map(category => <option key={category}>{category}</option>)}</select></label><button onClick={() => setRenaming(true)} disabled={editing !== null || !!linkSource} title={editing !== null ? 'メモの編集を完了してから変更してください' : undefined}>名前を変更</button></div>}
         {linkSource && <ConnectionPicker source={linkSource} words={keywordIds} data={data} update={setData} close={() => setLinkSource(null)}/>}
