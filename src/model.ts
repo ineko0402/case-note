@@ -202,3 +202,26 @@ export function placeMemoWords(data: Data, words: string[]): Data {
  const missing = unique.filter(word => !data.board.cards.some(card => card.word === word));
  return { ...data, board: { ...data.board, cards: [...data.board.cards, ...missing.map((word, index) => ({word, x: startX + index % 3 * 240, y: 40 + Math.floor(index / 3) * 130}))] } };
 }
+
+export function addTimelineNotes(data: Data, entries: { id: string; time: string | null }[]): Data {
+ return entries.reduce((next, entry) => Object.hasOwn(next.timeline ?? {}, entry.id) ? next : setTimeline(next, entry.id, true, entry.time), data);
+}
+
+export function mergeKeywords(data: Data, from: string, to: string, category: string): Data {
+ const known=new Set([...keywordCounts(data).keys(),...Object.keys(data.categories),...data.keywordOrder,...data.links.flatMap(link=>[link.a,link.b]),...data.groups.flatMap(group=>group.members),...data.board.cards.map(card=>card.word)]);
+ if (from===to || !known.has(from) || !known.has(to) || /[\s*]/u.test(from+to) || !data.categoryOrder.includes(category)) throw new Error('統合するキーワードと分類を確認してください。');
+ const word=(value: string)=>value===from?to:value;
+ const links: Link[]=[];
+ for(const original of data.links) {
+  const link={...original,a:word(original.a),b:word(original.b)};
+  if(link.a===link.b)continue;
+  const duplicate=links.find(item=>(item.a===link.a&&item.b===link.b)||(item.a===link.b&&item.b===link.a));
+  if(duplicate){if(link.status==='confirmed')duplicate.status='confirmed';}else links.push(link);
+ }
+ const targetPlaced=data.board.cards.some(card=>card.word===to);
+ const categories=Object.fromEntries([...Object.entries(data.categories).filter(([key])=>key!==from),[to,category]]);
+ const order=data.keywordOrder.includes(to)?data.keywordOrder.filter(item=>item!==from):data.keywordOrder.map(word);
+ return {...data,notes:data.notes.map(note=>({...note,text:replaceKeyword(note.text,from,to)})),draft:replaceKeyword(data.draft,from,to),categories,keywordOrder:[...new Set(order)],registeredWords:[...new Set((data.registeredWords??[]).map(word))],links,
+ groups:data.groups.map(group=>({...group,members:[...new Set(group.members.map(word))].filter(member=>member!==to||group.category===category)})),
+ board:{...data.board,cards:data.board.cards.filter(card=>!targetPlaced||card.word!==from).map(card=>({...card,word:word(card.word)}))}};
+}

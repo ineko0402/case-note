@@ -180,3 +180,16 @@ test('memo diagram places unique missing cards and preserves existing cards and 
  const data={...emptyData,board:{cards:[{word:'A',x:20,y:30}],viewport:{x:0,y:0,zoom:1}},links:[{id:'l',a:'A',b:'B',status:'confirmed' as const}]};
  const next=placeMemoWords(data,['A','B','B','C']);assert.equal(next.board.cards.length,3);assert.deepEqual(next.board.cards[0],data.board.cards[0]);assert.deepEqual(next.links,data.links);assert.deepEqual(placeMemoWords(next,['B','C']).board,next.board);assert.ok(next.board.cards[1].x>20);assert.deepEqual(data.board.cards,[{word:'A',x:20,y:30}]);
 });
+
+import { addTimelineNotes } from './model.ts';
+test('bulk timeline selection adds only selected notes and preserves existing reference times',()=>{
+ const notes=['a','b','c'].map(id=>({id,text:'本文',createdAt:'2026-10-03T00:00:00Z'}));const data={...emptyData,notes,timeline:{a:'10:00'}};
+ const next=addTimelineNotes(data,[{id:'a',time:'08:00'},{id:'b',time:null}]);assert.deepEqual(next.timeline,{a:'10:00',b:null});assert.deepEqual(next.notes,data.notes);assert.deepEqual(validateData(next),next);assert.throws(()=>addTimelineNotes(data,[{id:'b',time:'25:00'}]));assert.deepEqual(data.timeline,{a:'10:00'});
+});
+
+import { mergeKeywords } from './model.ts';
+test('merging consolidates tokens, links, memberships, order and cards without changing timeline',()=>{
+ const data={...emptyData,notes:[{id:'n',text:'A *A *AB *B',createdAt:'2026-10-03T00:00:00Z'}],draft:'*A',categories:{A:'人物',B:'ナンバー'},keywordOrder:['A','C','B'],registeredWords:['A','B'],timeline:{n:'09:00'},links:[{id:'self',a:'A',b:'B',status:'tentative' as const},{id:'one',a:'A',b:'C',status:'tentative' as const},{id:'two',a:'C',b:'B',status:'confirmed' as const}],groups:[{id:'g',name:'人物',category:'人物',members:['A'],collapsed:false},{id:'h',name:'番号',category:'ナンバー',members:['B'],collapsed:false}],board:{cards:[{word:'A',x:1,y:2},{word:'B',x:30,y:40}],viewport:{x:0,y:0,zoom:1}}};
+ const next=mergeKeywords(data,'A','B','人物');assert.equal(next.notes[0].text,'A *B *AB *B');assert.equal(next.draft,'*B');assert.deepEqual(next.categories,{B:'人物'});assert.deepEqual(next.keywordOrder,['C','B']);assert.deepEqual(next.registeredWords,['B']);assert.deepEqual(next.links,[{id:'one',a:'B',b:'C',status:'confirmed'}]);assert.deepEqual(next.groups.map(g=>g.members),[['B'],[]]);assert.deepEqual(next.board.cards,[{word:'B',x:30,y:40}]);assert.deepEqual(next.timeline,data.timeline);assert.deepEqual(validateData(next),next);assert.equal(data.links[0].id,'self');assert.throws(()=>mergeKeywords(data,'A','A','人物'));assert.throws(()=>mergeKeywords(data,'A','missing','人物'));
+ const onlySource={...data,board:{...data.board,cards:[{word:'A',x:1,y:2}]}};assert.deepEqual(mergeKeywords(onlySource,'A','B','人物').board.cards,[{word:'B',x:1,y:2}]);
+});

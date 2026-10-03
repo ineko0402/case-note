@@ -15,6 +15,7 @@ import { KeywordRename } from './KeywordRename';
 import { NumberRegistration } from './NumberRegistration';
 import { Timeline, TimelineSetting } from './Timeline';
 import { MemoGraphPicker } from './MemoGraphPicker';
+import { KeywordMerge } from './KeywordMerge';
 import './style.css';
 
 function App() {
@@ -25,6 +26,9 @@ function App() {
   const [showBoardMemos, setShowBoardMemos] = useState(false);
   const [memoHighlight, setMemoHighlight] = useState<string | null>(null);
   const [showKeywordList, setShowKeywordList] = useState(true);
+  const [merging,setMerging]=useState(false);
+  const mergeDialog=useRef<HTMLDialogElement>(null);
+  useEffect(()=>{if(merging)mergeDialog.current?.showModal();},[merging]);
   const [renaming, setRenaming] = useState(false);
   const renameDialog = useRef<HTMLDialogElement>(null);
   const [renameUndo, setRenameUndo] = useState<{ before: Data; after: Data; from: string; to: string; graphBefore?: string[] } | null>(null);
@@ -115,6 +119,7 @@ function App() {
     <header><div><h1>Case Note</h1><p>手がかりを、そのまま書き留める。</p></div><span className="save-status" role="status">{status}</span></header>
     <nav aria-label="表示切り替え"><button aria-pressed={view === 'notes'} onClick={() => { setView('notes'); setSelected(null); setLinkSource(null); }}>メモ</button><button aria-pressed={view === 'keywords'} onClick={() => setView('keywords')}>キーワード <span>{counts.size}</span></button><button aria-pressed={view === 'board'} onClick={() => { setView('board'); setLinkSource(null); }}>関係図</button><button aria-pressed={view === 'timeline'} onClick={() => { setView('timeline'); setSelected(null); setLinkSource(null); }}>タイムライン</button></nav>
     {!ready ? <p>{loadFailed ? 'データを保護するため入力を停止しています。' : 'メモを読み込んでいます。'}</p> : <>
+    {merging && selected && <dialog ref={mergeDialog} className="settings-dialog" aria-label="キーワードを統合" onCancel={()=>setMerging(false)}><KeywordMerge word={selected} data={data} close={()=>setMerging(false)} apply={(next,name)=>{setRenameUndo({before:data,after:next,from:selected,to:name,graphBefore:graphWords});setData(next);if(memoHighlight===selected)setMemoHighlight(name);setSelected(name);setGraphWords(previous=>previous?[...new Set(previous.map(item=>item===selected?name:item))]:previous);}}/></dialog>}
     {renaming && selected && <dialog ref={renameDialog} className="settings-dialog" aria-label="キーワードの名前を変更" onCancel={() => setRenaming(false)}><KeywordRename word={selected} data={data} close={() => setRenaming(false)} apply={(next, name) => { setRenameUndo({ before: data, after: next, from: selected, to: name, graphBefore: graphWords }); setData(next); if (memoHighlight === selected) setMemoHighlight(name); if (linkSource === selected) setLinkSource(name); setSelected(name); setGraphWords(previous=>previous?[...new Set(previous.map(item=>item===selected?name:item))]:previous); }}/></dialog>}
     {settings && <dialog ref={settingsDialog} className="settings-dialog" aria-label="分類設定" onCancel={() => setSettings(false)}><CategorySettings data={data} update={setData} close={() => setSettings(false)}/></dialog>}
     {groupCategory && <dialog ref={groupDialog} className="settings-dialog" aria-label="まとまり設定" onCancel={() => setGroupCategory(null)}><GroupSettings category={groupCategory} data={data} update={setData} close={() => setGroupCategory(null)}/></dialog>}
@@ -124,7 +129,7 @@ function App() {
     {view === 'timeline' ? <Timeline data={data} update={setData} render={rendered} openGraph={note => setGraphNote(note.id)}/> : <main className={view !== 'notes' ? 'workspace organizing' + (showKeywordList ? '' : ' sidebar-collapsed') : 'workspace'}>
       {view !== 'notes' && showKeywordList && <aside ref={keywordPanel} tabIndex={0} aria-label="キーワード一覧" onScroll={event => { scrollPositions.current.sidebar = event.currentTarget.scrollTop; }}><div className="list-heading"><h2>キーワード</h2><button onClick={() => setSettings(!settings)}>分類設定</button></div>{data.categoryOrder.includes('ナンバー') && <button className="batch-start" onClick={() => setNumbers(true)}>番号をまとめて追加</button>}{hasUnclassified && <button className="batch-start" onClick={() => setBatch(true)}>未分類をまとめて分類</button>}<button className="all" aria-pressed={!selected} onClick={() => setSelected(null)}>すべてのメモ <span>{data.notes.length}</span></button>{data.categoryOrder.map(category => <KeywordCategory key={category} category={category} data={data} counts={counts} selected={selected} select={selectKeyword} update={setData} settings={() => setGroupCategory(category)}/>)}{counts.size === 0 && <p className="muted">メモに *キーワード を書くと、ここに集まります。</p>}</aside>}
       <div className="organize-content">
-        {view !== 'notes' && <div className="context-header" aria-label="選択キーワードと結び">        {selected && <div className="selection"><div><span className="keyword-kind">キーワード</span><h2>*{selected}</h2><span>{counts.get(selected) ?? 0}件のメモ</span></div><label>分類<select value={data.categories[selected] ?? '未分類'} onChange={event => setData(changeKeywordCategory(data, selected, event.target.value))}>{data.categoryOrder.map(category => <option key={category}>{category}</option>)}</select></label><button onClick={() => setRenaming(true)} disabled={editing !== null || !!linkSource} title={editing !== null ? 'メモの編集を完了してから変更してください' : undefined}>名前を変更</button></div>}
+        {view !== 'notes' && <div className="context-header" aria-label="選択キーワードと結び">        {selected && <div className="selection"><div><span className="keyword-kind">キーワード</span><h2>*{selected}</h2><span>{counts.get(selected) ?? 0}件のメモ</span></div><label>分類<select value={data.categories[selected] ?? '未分類'} onChange={event => setData(changeKeywordCategory(data, selected, event.target.value))}>{data.categoryOrder.map(category => <option key={category}>{category}</option>)}</select></label><button onClick={() => setRenaming(true)} disabled={editing !== null || !!linkSource} title={editing !== null ? 'メモの編集を完了してから変更してください' : undefined}>名前を変更</button><button disabled={editing !== null || !!linkSource} onClick={()=>setMerging(true)}>統合</button></div>}
         {linkSource && <ConnectionPicker source={linkSource} words={keywordIds} data={data} update={setData} close={() => setLinkSource(null)}/>}
         {selected && <KeywordConnections word={selected} data={data} update={setData} select={selectKeyword} begin={() => setLinkSource(selected)} isChoosing={!!linkSource}/>}
 <div className="organize-switch"><button aria-expanded={showKeywordList} onClick={() => setShowKeywordList(!showKeywordList)}>{showKeywordList ? 'キーワード一覧を隠す' : 'キーワード一覧を表示'}</button>{view === 'board' && <button aria-pressed={showBoardMemos} onClick={() => setShowBoardMemos(!showBoardMemos)}>{showBoardMemos ? '関連メモを隠す' : '関連メモを表示'}</button>}</div></div>}
