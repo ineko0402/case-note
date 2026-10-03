@@ -24,7 +24,7 @@ test('converts selection and supplies boundaries without doubling marker', () =>
 test('migrates old backup and preserves customized version 2 settings', () => {
   const old = { version: 1, notes: [], categories: { '6': 'ナンバー' }, draft: '*夜' };
   const migrated = validateData(old);
-  assert.equal(migrated.version, 2);
+  assert.equal(migrated.version, 3);
   assert.equal(migrated.categories['6'], 'ナンバー');
   assert.deepEqual(migrated.keywordOrder, []);
   const custom = { ...emptyData, categoryOrder: ['未分類', '証言'], categories: { '6': '証言' }, keywordOrder: ['6'], collapsed: ['証言'] };
@@ -47,4 +47,38 @@ test('v2 backups without organized note order load with registration order', () 
   const { noteOrder, ...previous } = emptyData;
   assert.deepEqual(validateData(previous).noteOrder, []);
   assert.throws(() => validateData({ ...emptyData, noteOrder: ['a', 'a'] }));
+});
+test('connections are undirected, many-to-many, tentative and do not propagate', async () => {
+  const { connect } = await import('./model.ts');
+  let data = connect(emptyData, '1', 'A', 'one');
+  data = connect(data, '1', '鍵', 'two');
+  assert.equal(data.links.length, 2);
+  assert.equal(data.links[0].status, 'tentative');
+  assert.deepEqual(connect(data, 'A', '1', 'duplicate'), data);
+  assert.deepEqual(connect(data, '1', '1', 'self'), data);
+  assert.equal(data.links.some(link => link.a === 'A' && link.b === '鍵'), false);
+});
+test('group memberships remain inside category and follow category rename/deletion', async () => {
+  const { changeKeywordCategory, renameCategory, deleteCategory } = await import('./model.ts');
+  const data = { ...emptyData, categories: { '1': 'ナンバー', '6': 'ナンバー' }, groups: [
+    { id: 'g1', name: '仲良し', category: 'ナンバー', members: ['1', '6'], collapsed: false },
+    { id: 'g2', name: '兄弟', category: 'ナンバー', members: ['1'], collapsed: true }
+  ] };
+  assert.deepEqual(validateData(data), data);
+  const changed = changeKeywordCategory(data, '1', '人物');
+  assert.deepEqual(changed.groups.map(group => group.members), [['6'], []]);
+  assert.equal(renameCategory(data, 'ナンバー', '番号').groups[0].category, '番号');
+  assert.equal(deleteCategory(data, 'ナンバー').groups.length, 0);
+  assert.equal(deleteCategory(data, 'ナンバー').categories['1'], '未分類');
+  assert.throws(() => validateData({ ...data, categories: { '1': '人物' } }));
+});
+test('v3 backups keep connections and groups and reject duplicate relationships', async () => {
+  const { connect } = await import('./model.ts');
+  const data = connect(emptyData, '1', 'A', 'l');
+  assert.deepEqual(validateData(JSON.parse(JSON.stringify(data))), data);
+  assert.throws(() => validateData({ ...data, links: [...data.links, { id: 'l2', a: 'A', b: '1', status: 'confirmed' }] }));
+  const { links, groups, ...old } = emptyData;
+  const migrated = validateData({ ...old, version: 2 });
+  assert.deepEqual(migrated.links, []);
+  assert.deepEqual(migrated.groups, []);
 });
