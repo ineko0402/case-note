@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/ineko0402/case-note#readme",
   "dependencies": {
+    "@xyflow/react": "^12.12.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },

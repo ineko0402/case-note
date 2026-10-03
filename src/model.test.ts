@@ -24,7 +24,7 @@ test('converts selection and supplies boundaries without doubling marker', () =>
 test('migrates old backup and preserves customized version 2 settings', () => {
   const old = { version: 1, notes: [], categories: { '6': 'ナンバー' }, draft: '*夜' };
   const migrated = validateData(old);
-  assert.equal(migrated.version, 3);
+  assert.equal(migrated.version, 4);
   assert.equal(migrated.categories['6'], 'ナンバー');
   assert.deepEqual(migrated.keywordOrder, []);
   const custom = { ...emptyData, categoryOrder: ['未分類', '証言'], categories: { '6': '証言' }, keywordOrder: ['6'], collapsed: ['証言'] };
@@ -81,4 +81,23 @@ test('v3 backups keep connections and groups and reject duplicate relationships'
   const migrated = validateData({ ...old, version: 2 });
   assert.deepEqual(migrated.links, []);
   assert.deepEqual(migrated.groups, []);
+});
+test('placing and removing cards leaves notes, connections and groups intact', async () => {
+  const { placeCard, removeCard, connect } = await import('./model.ts');
+  const linked = connect(emptyData, '1', 'A', 'l');
+  const placed = placeCard(placeCard(linked, '1', 50, 80), 'A', 300, -20);
+  assert.equal(placed.board.cards.length, 2);
+  assert.deepEqual(placeCard(placed, '1', 999, 999), placed);
+  const removed = removeCard(placed, '1');
+  assert.equal(removed.board.cards.length, 1);
+  assert.deepEqual(removed.links, linked.links);
+  assert.deepEqual(removed.notes, linked.notes);
+  assert.deepEqual(validateData(JSON.parse(JSON.stringify(placed))), placed);
+});
+test('older backups start with an empty board and invalid positions are rejected', () => {
+  const { board, ...older } = emptyData;
+  const migrated = validateData({ ...older, version: 3 });
+  assert.deepEqual(migrated.board.cards, []);
+  assert.throws(() => validateData({ ...emptyData, board: { ...board, cards: [{ word: '1', x: Infinity, y: 0 }] } }));
+  assert.throws(() => validateData({ ...emptyData, board: { ...board, viewport: { x: 0, y: 0, zoom: 0 } } }));
 });

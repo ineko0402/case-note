@@ -2,8 +2,10 @@ export const categories = ['未分類', 'ナンバー', '人物', '場所', 'ア
 export type Note = { id: string; text: string; createdAt: string };
 export type Link = { id: string; a: string; b: string; status: 'tentative' | 'confirmed' };
 export type Group = { id: string; name: string; category: string; members: string[]; collapsed: boolean };
-export type Data = { version: 3; notes: Note[]; categories: Record<string, string>; draft: string; categoryOrder: string[]; keywordOrder: string[]; collapsed: string[]; noteOrder: string[]; links: Link[]; groups: Group[] };
-export const emptyData: Data = { version: 3, notes: [], categories: {}, draft: '', categoryOrder: [...categories], keywordOrder: [], collapsed: [], noteOrder: [], links: [], groups: [] };
+export type BoardCard = { word: string; x: number; y: number };
+export type Board = { cards: BoardCard[]; viewport: { x: number; y: number; zoom: number } };
+export type Data = { version: 4; notes: Note[]; categories: Record<string, string>; draft: string; categoryOrder: string[]; keywordOrder: string[]; collapsed: string[]; noteOrder: string[]; links: Link[]; groups: Group[]; board: Board };
+export const emptyData: Data = { version: 4, notes: [], categories: {}, draft: '', categoryOrder: [...categories], keywordOrder: [], collapsed: [], noteOrder: [], links: [], groups: [], board: { cards: [], viewport: { x: 0, y: 0, zoom: 1 } } };
 export function keywords(text: string): string[] {
   return [...new Set([...text.matchAll(/(?:^|\s)\*([^\s*]+)/gu)].map(match => match[1]))];
 }
@@ -30,7 +32,7 @@ export function moveBefore<T>(items: T[], from: T, to: T): T[] {
 export function validateData(value: unknown): Data {
   if (!value || typeof value !== 'object') throw new Error('バックアップの形式が違います。');
   const data = value as Data;
-  if (((data.version as number) !== 1 && (data.version as number) !== 2 && data.version !== 3) || !Array.isArray(data.notes) || typeof data.draft !== 'string' || !data.categories || typeof data.categories !== 'object' || Array.isArray(data.categories)) throw new Error('バックアップの形式が違います。');
+  if (((data.version as number) !== 1 && (data.version as number) !== 2 && (data.version as number) !== 3 && data.version !== 4) || !Array.isArray(data.notes) || typeof data.draft !== 'string' || !data.categories || typeof data.categories !== 'object' || Array.isArray(data.categories)) throw new Error('バックアップの形式が違います。');
   const ids = new Set<string>();
   for (const note of data.notes) {
     if (!note || typeof note.id !== 'string' || ids.has(note.id) || typeof note.text !== 'string' || typeof note.createdAt !== 'string' || !Number.isFinite(Date.parse(note.createdAt))) throw new Error('メモの形式が違います。');
@@ -42,8 +44,8 @@ export function validateData(value: unknown): Data {
   if (!validList(order) || order[0] !== '未分類' || Object.values(data.categories).some(category => !order.includes(category))) throw new Error('分類の形式が違います。');
   if (!legacy && (!validList(data.keywordOrder) || !validList(data.collapsed) || data.collapsed.some(category => !order.includes(category)))) throw new Error('並び順の形式が違います。');
   if (data.noteOrder !== undefined && !validList(data.noteOrder)) throw new Error('メモの並び順が違います。');
-  const links = data.version === 3 ? data.links : [];
-  const groups = data.version === 3 ? data.groups : [];
+  const links = (data.version as number) >= 3 ? data.links : [];
+  const groups = (data.version as number) >= 3 ? data.groups : [];
   if (!Array.isArray(links) || !Array.isArray(groups)) throw new Error('結び・まとまりの形式が違います。');
   const linkIds = new Set<string>(), pairs = new Set<string>(), groupIds = new Set<string>(), names = new Set<string>();
   for (const link of links) {
@@ -58,7 +60,14 @@ export function validateData(value: unknown): Data {
     if (names.has(name)) throw new Error('まとまりの名前が重複しています。');
     names.add(name); groupIds.add(group.id);
   }
-  return { version: 3, notes: data.notes, categories: Object.fromEntries(Object.entries(data.categories)), draft: data.draft, categoryOrder: order, keywordOrder: legacy ? [] : data.keywordOrder, collapsed: legacy ? [] : data.collapsed, noteOrder: data.noteOrder ?? [], links, groups };
+  const board = data.version === 4 ? data.board : { cards: [], viewport: { x: 0, y: 0, zoom: 1 } };
+  if (!board || !Array.isArray(board.cards) || !board.viewport || !Number.isFinite(board.viewport.x) || !Number.isFinite(board.viewport.y) || !Number.isFinite(board.viewport.zoom) || board.viewport.zoom < 0.1 || board.viewport.zoom > 2) throw new Error('関係図の形式が違います。');
+  const boardWords = new Set<string>();
+  for (const card of board.cards) {
+    if (!card || typeof card.word !== 'string' || !card.word || /[\s*]/u.test(card.word) || boardWords.has(card.word) || !Number.isFinite(card.x) || !Number.isFinite(card.y)) throw new Error('カードの形式が違います。');
+    boardWords.add(card.word);
+  }
+  return { version: 4, notes: data.notes, categories: Object.fromEntries(Object.entries(data.categories)), draft: data.draft, categoryOrder: order, keywordOrder: legacy ? [] : data.keywordOrder, collapsed: legacy ? [] : data.collapsed, noteOrder: data.noteOrder ?? [], links, groups, board };
 }
 
 export function moveRelative<T>(items: T[], from: T, to: T, after: boolean): T[] {
@@ -84,4 +93,12 @@ export function renameCategory(data: Data, category: string, next: string): Data
 }
 export function deleteCategory(data: Data, category: string): Data {
   return { ...data, categoryOrder: data.categoryOrder.filter(item => item !== category), collapsed: data.collapsed.filter(item => item !== category), categories: Object.fromEntries(Object.entries(data.categories).map(([word, item]) => [word, item === category ? '未分類' : item])), groups: data.groups.filter(group => group.category !== category) };
+}
+
+export function placeCard(data: Data, word: string, x: number, y: number): Data {
+  if (data.board.cards.some(card => card.word === word)) return data;
+  return { ...data, board: { ...data.board, cards: [...data.board.cards, { word, x, y }] } };
+}
+export function removeCard(data: Data, word: string): Data {
+  return { ...data, board: { ...data.board, cards: data.board.cards.filter(card => card.word !== word) } };
 }
