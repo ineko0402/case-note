@@ -165,3 +165,12 @@ test('timeline is opt-in, inserts late early events, preserves ties and keeps un
  assert.deepEqual(validateData(next),next);assert.deepEqual(setTimeline(next,'c',false).timeline,{a:'10:00',b:'09:00',d:'09:00'});
  assert.deepEqual(data.noteOrder,['d','a','b','c']);assert.throws(()=>setTimeline(next,'a',true,'25:00'));assert.throws(()=>validateData({...next,timeline:{missing:'09:00'}}));assert.throws(()=>validateData({...next,timeline:{a:'0900'}}));
 });
+
+import { updateNoteText } from './model.ts';
+test('editing a timeline memo preserves reference time, identity and other data', () => {
+ const data={...emptyData,notes:[{id:'n',text:'*0900 本文',createdAt:'2026-10-03T00:00:00Z'}],timeline:{n:'09:00'},noteOrder:['n']};
+ const edited=updateNoteText(data,'n','*1000 修正 *人物');
+ assert.equal(edited.notes[0].text,'*1000 修正 *人物');assert.equal(edited.notes[0].createdAt,data.notes[0].createdAt);
+ assert.deepEqual(edited.timeline,{n:'09:00'});assert.deepEqual(edited.noteOrder,['n']);assert.deepEqual(validateData(edited),edited);
+ assert.deepEqual(keywords(edited.notes[0].text),['1000','人物']);assert.equal(data.notes[0].text,'*0900 本文');assert.equal(updateNoteText(data,'n','  '),data);
+});

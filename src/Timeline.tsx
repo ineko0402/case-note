@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
-import { noteTimes, setTimeline, timelineNotes, type Data, type Note } from './model';
+import { KeywordEditor } from './KeywordEditor';
+import { keywordCounts, updateNoteText, noteTimes, setTimeline, timelineNotes, type Data, type Note } from './model';
 export function TimelineSetting({note,data,update}: {note: Note; data: Data; update: (data: Data) => void}) {
  const enabled=Object.hasOwn(data.timeline ?? {},note.id), time=data.timeline?.[note.id] ?? null;
  const candidates=noteTimes(data,note);
@@ -7,6 +8,10 @@ export function TimelineSetting({note,data,update}: {note: Note; data: Data; upd
 }
 export function Timeline({data,update,render}: {data: Data; update: (data: Data) => void; render: (text: string) => ReactNode}) {
  const [search,setSearch]=useState('');
- const notes=timelineNotes(data).filter(note=>note.text.toLocaleLowerCase().includes(search.toLocaleLowerCase()));
- return <main className="workspace timeline-panel" tabIndex={0} aria-label="タイムライン"><div className="list-heading"><h2>タイムライン <span>{notes.length}</span></h2><input type="search" aria-label="タイムラインを検索" placeholder="メモを検索" value={search} onChange={event=>setSearch(event.target.value)}/></div><p className="order-hint">時刻順 · 同時刻は整理順 · 時刻不明は末尾</p>{!notes.length && <p className="muted">{Object.keys(data.timeline ?? {}).length ? '該当するメモはありません。' : 'メモの「タイムラインに表示」から、載せるメモを選んでください。'}</p>}<div className="timeline-list">{notes.map(note=><article key={note.id}><div className="timeline-time">{data.timeline?.[note.id] ?? '時刻不明'}</div><div className="note-body">{render(note.text)}</div><TimelineSetting note={note} data={data} update={update}/></article>)}</div></main>;
+ const [editing,setEditing]=useState<string | null>(null);
+ const [text,setText]=useState('');
+ const registered=new Set(keywordCounts(data).keys());
+ function saveEdit() { if (!editing || !text.trim()) return; update(updateNoteText(data,editing,text)); setEditing(null); }
+ const notes=timelineNotes(data).filter(note=>note.id === editing || note.text.toLocaleLowerCase().includes(search.toLocaleLowerCase()));
+ return <main className="workspace timeline-panel" tabIndex={0} aria-label="タイムライン"><div className="list-heading"><h2>タイムライン <span>{notes.length}</span></h2><input type="search" aria-label="タイムラインを検索" placeholder="メモを検索" value={search} onChange={event=>setSearch(event.target.value)}/></div><p className="order-hint">時刻順 · 同時刻は整理順 · 時刻不明は末尾</p>{!notes.length && <p className="muted">{Object.keys(data.timeline ?? {}).length ? '該当するメモはありません。' : 'メモの「タイムラインに表示」から、載せるメモを選んでください。'}</p>}<div className="timeline-list">{notes.map(note=><article key={note.id}><div className="timeline-time">{data.timeline?.[note.id] ?? '時刻不明'}</div>{editing === note.id ? <form onSubmit={event=>{event.preventDefault();saveEdit();}}><KeywordEditor label="メモを編集" autoFocus value={text} onChange={setText} registered={registered} onSubmitShortcut={saveEdit}/><p className="muted">基準時刻は維持されます。変更する場合は保存後に設定してください。</p><div className="actions"><button type="button" onClick={()=>setEditing(null)}>キャンセル</button><button className="primary" disabled={!text.trim()}>保存</button></div></form> : <><div className="note-body">{render(note.text)}</div><div className="note-footer"><time dateTime={note.createdAt}>{new Date(note.createdAt).toLocaleString('ja-JP', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</time><button disabled={editing !== null} onClick={()=>{setEditing(note.id);setText(note.text);}}>編集</button></div><TimelineSetting note={note} data={data} update={update}/></>}</article>)}</div></main>;
 }
