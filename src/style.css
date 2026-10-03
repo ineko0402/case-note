@@ -20,3 +20,5 @@ article{padding:12px 14px}.note-body{line-height:1.7;font-size:13px}.note-footer
 @media(pointer:coarse){.word-moves button,.drag-handle,.category-heading>button:not(.category-toggle),.note-sort button,.note-footer button{min-width:44px;min-height:44px}}
 
 .rename-field{display:grid;gap:8px;margin:16px 0;font-size:13px}.rename-notice{flex:none;background:#e9ede3;padding:8px 12px;font-size:13px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.rename-notice button{margin-left:auto}.rename-notice+ .organize-body{min-height:0}
+
+.context-header .organize-switch{flex-wrap:wrap;max-width:100%}.board-empty p{max-width:420px;margin-inline:auto}

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
-import { emptyData, keywords, connect, placeCard, changeKeywordCategory, moveRelative, completeOrder, validateData, type Data } from './model';
+import { emptyData, keywords, connect, changeKeywordCategory, moveRelative, completeOrder, validateData, type Data } from './model';
 import { load, save } from './storage';
 import { KeywordEditor } from './KeywordEditor';
 import { CategorySettings } from './CategorySettings';
@@ -92,12 +92,11 @@ function App() {
   function selectKeyword(word: string) {
     if (linkSource) {
       if (word === linkSource) return;
-      setData(previous => { const linked = connect(previous, linkSource, word, crypto.randomUUID()); return view === 'board' ? placeCard(linked, word, (-linked.board.viewport.x + 200) / linked.board.viewport.zoom, (-linked.board.viewport.y + 120) / linked.board.viewport.zoom) : linked; });
+      setData(previous => { const linked = connect(previous, linkSource, word, crypto.randomUUID()); return linked; });
       setLinkSource(null);
       return;
     }
-    if (view === 'board') setData(previous => placeCard(previous, word, (-previous.board.viewport.x + 160 + previous.board.cards.length % 4 * 25) / previous.board.viewport.zoom, (-previous.board.viewport.y + 80 + previous.board.cards.length % 4 * 25) / previous.board.viewport.zoom));
-    setSelected(word); if (view !== 'board') setView('keywords');
+    setSelected(previous => previous === word ? null : word); if (view !== 'board') setView('keywords');
   }
   const activeKeyword = view === 'notes' ? memoHighlight : linkSource ?? selected;
   const relatedWords = new Set(data.links.filter(link => link.a === activeKeyword || link.b === activeKeyword).map(link => link.a === activeKeyword ? link.b : link.a));
@@ -115,14 +114,14 @@ function App() {
     <main className={view !== 'notes' ? 'workspace organizing' + (showKeywordList ? '' : ' sidebar-collapsed') : 'workspace'}>
       {view !== 'notes' && showKeywordList && <aside ref={keywordPanel} tabIndex={0} aria-label="キーワード一覧" onScroll={event => { scrollPositions.current.sidebar = event.currentTarget.scrollTop; }}><div className="list-heading"><h2>キーワード</h2><button onClick={() => setSettings(!settings)}>分類設定</button></div>{hasUnclassified && <button className="batch-start" onClick={() => setBatch(true)}>未分類をまとめて分類</button>}<button className="all" aria-pressed={!selected} onClick={() => setSelected(null)}>すべてのメモ <span>{data.notes.length}</span></button>{data.categoryOrder.map(category => <KeywordCategory key={category} category={category} data={data} counts={counts} selected={selected} select={selectKeyword} update={setData} settings={() => setGroupCategory(category)}/>)}{counts.size === 0 && <p className="muted">メモに *キーワード を書くと、ここに集まります。</p>}</aside>}
       <div className="organize-content">
-        {view !== 'notes' && <div className="context-header" aria-label="選択キーワードと結び">        {selected && <div className="selection"><div><span className="keyword-kind">キーワード</span><h2>*{selected}</h2><span>{counts.get(selected) ?? 0}件のメモ</span></div><label>分類<select value={data.categories[selected] ?? '未分類'} onChange={event => setData(changeKeywordCategory(data, selected, event.target.value))}>{data.categoryOrder.map(category => <option key={category}>{category}</option>)}</select></label><button onClick={() => setRenaming(true)} disabled={editing !== null || !!linkSource} title={editing !== null ? 'メモの編集を完了してから変更してください' : undefined}>名前を変更</button><button onClick={() => setSelected(null)} aria-label="キーワードの絞り込みを解除">解除</button></div>}
+        {view !== 'notes' && <div className="context-header" aria-label="選択キーワードと結び">        {selected && <div className="selection"><div><span className="keyword-kind">キーワード</span><h2>*{selected}</h2><span>{counts.get(selected) ?? 0}件のメモ</span></div><label>分類<select value={data.categories[selected] ?? '未分類'} onChange={event => setData(changeKeywordCategory(data, selected, event.target.value))}>{data.categoryOrder.map(category => <option key={category}>{category}</option>)}</select></label><button onClick={() => setRenaming(true)} disabled={editing !== null || !!linkSource} title={editing !== null ? 'メモの編集を完了してから変更してください' : undefined}>名前を変更</button></div>}
         {linkSource && <ConnectionPicker source={linkSource} words={keywordIds} data={data} update={setData} close={() => setLinkSource(null)}/>}
         {selected && <KeywordConnections word={selected} data={data} update={setData} select={selectKeyword} begin={() => setLinkSource(selected)} isChoosing={!!linkSource}/>}
-<div className="organize-switch"><button aria-expanded={showKeywordList} onClick={() => setShowKeywordList(!showKeywordList)}>{showKeywordList ? '一覧を閉じる' : '一覧を表示'}</button>{view === 'board' && <button aria-pressed={showBoardMemos} onClick={() => setShowBoardMemos(!showBoardMemos)}>{showBoardMemos ? 'メモを閉じる' : 'メモを表示'}</button>}</div></div>}
+<div className="organize-switch"><button aria-expanded={showKeywordList} onClick={() => setShowKeywordList(!showKeywordList)}>{showKeywordList ? 'キーワード一覧を隠す' : 'キーワード一覧を表示'}</button>{view === 'board' && <button aria-pressed={showBoardMemos} onClick={() => setShowBoardMemos(!showBoardMemos)}>{showBoardMemos ? '関連メモを隠す' : '関連メモを表示'}</button>}</div></div>}
         {renameUndo && data === renameUndo.after && <div className="rename-notice" role="status">*{renameUndo.from} を *{renameUndo.to} に変更しました。<button disabled={editing !== null || !!linkSource} onClick={() => { setData(renameUndo.before); setSelected(renameUndo.from); if (memoHighlight === renameUndo.to) setMemoHighlight(renameUndo.from); if (linkSource === renameUndo.to) setLinkSource(renameUndo.from); setRenameUndo(null); }}>元に戻す</button></div>}
         {view === 'notes' && memoHighlight && <div className="memo-highlight-bar">*{memoHighlight} を強調中 <button onClick={() => setMemoHighlight(null)}>強調を解除</button></div>}
         <div className={'organize-body ' + (view === 'board' ? 'with-board' : '')}>
-        {view === 'board' && <RelationshipBoard embedded focusWord={selected} onSelect={selectKeyword} data={data} update={setData} words={keywordIds} openNotes={word => { setSelected(word); setView('keywords'); }}/>}
+        {view === 'board' && <RelationshipBoard embedded focusWord={selected} onSelect={selectKeyword} data={data} update={setData} words={keywordIds} openNotes={word => { setSelected(word); setShowBoardMemos(true); }}/>}
       <div hidden={view === 'board' && !showBoardMemos} className="notes-panel" ref={notesPanel} tabIndex={0} role="region" aria-label={view === 'notes' ? 'メモ一覧' : '関連メモ一覧'} onScroll={event => { scrollPositions.current[view] = event.currentTarget.scrollTop; }}>
         {view === 'notes' && <form className="composer" onSubmit={add}><label htmlFor="draft">新しいメモ</label><KeywordEditor id="draft" placeholder="文章を書いて選択すると、キーワードにできます" value={data.draft} registered={new Set(counts.keys())} onChange={value => setData({ ...data, draft: value })} onSubmitShortcut={() => add({ preventDefault() {} } as FormEvent)}/><div className="composer-bottom"><small>*から空白までがキーワード</small><button className="primary" disabled={!data.draft.trim()}>追加</button></div></form>}
         <div className="list-heading"><h2>{selected ? '関連するメモ' : 'メモ'} <span>{notes.length}</span></h2><input aria-label="メモを検索" type="search" placeholder="メモを検索" value={search} onChange={event => setSearch(event.target.value)}/></div>
