@@ -101,3 +101,19 @@ test('older backups start with an empty board and invalid positions are rejected
   assert.throws(() => validateData({ ...emptyData, board: { ...board, cards: [{ word: '1', x: Infinity, y: 0 }] } }));
   assert.throws(() => validateData({ ...emptyData, board: { ...board, viewport: { x: 0, y: 0, zoom: 0 } } }));
 });
+test('batch classification changes only selected unclassified keywords', async () => {
+  const { classifyUnassigned } = await import('./model.ts');
+  const data = { ...emptyData, categories: { 'A': '人物' } };
+  const classified = classifyUnassigned(data, ['1', '6', 'A', '1'], 'ナンバー');
+  assert.equal(classified.categories['1'], 'ナンバー');
+  assert.equal(classified.categories['6'], 'ナンバー');
+  assert.equal(classified.categories['A'], '人物');
+  assert.deepEqual(classifyUnassigned(data, ['1'], 'unknown'), data);
+});
+test('board context includes co-occurring and directly linked keywords without inferred links', async () => {
+  const { contextWords, connect } = await import('./model.ts');
+  const data = connect({ ...emptyData, notes: [{ id: 'n', text: '*1 *食堂 *鍵', createdAt: new Date().toISOString() }] }, '1', 'A', 'l');
+  assert.deepEqual([...contextWords(data, '1')!].sort(), ['1', 'A', '食堂', '鍵'].sort());
+  assert.equal(contextWords(data, null), null);
+  assert.equal(data.links.length, 1);
+});
