@@ -190,3 +190,8 @@ export function timelineNotes(data: Data): Note[] {
  const av=data.timeline?.[a.id] ?? '99:99', bv=data.timeline?.[b.id] ?? '99:99';return av < bv ? -1 : av > bv ? 1 : 0;
  });
 }
+
+export function updateNoteText(data: Data, id: string, text: string): Data {
+ if (!text.trim()) return data;
+ return { ...data, notes: data.notes.map(note => note.id === id ? { ...note, text } : note) };
+}
