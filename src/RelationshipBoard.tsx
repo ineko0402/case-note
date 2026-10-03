@@ -8,8 +8,8 @@ function KeywordCard({ data }: NodeProps<KeywordNode>) {
   return <div className="board-card"><Handle type="source" position={Position.Left} id="left" aria-label="左の接続点"/><small>分類：{data.category}{data.missing ? ' · メモなし' : ''}</small><div>*{data.word}</div><Handle type="source" position={Position.Right} id="right" aria-label="右の接続点"/></div>;
 }
 const nodeTypes = { keyword: KeywordCard };
-type Props = { data: Data; update: Dispatch<SetStateAction<Data>>; words: string[]; openNotes: (word: string) => void; embedded?: boolean; focusWord?: string | null; onSelect?: (word: string) => void };
-export function RelationshipBoard({ data, update, words, openNotes, embedded = false, focusWord = null, onSelect }: Props) {
+type Props = { scopeWords?: string[]; data: Data; update: Dispatch<SetStateAction<Data>>; words: string[]; openNotes: (word: string) => void; embedded?: boolean; focusWord?: string | null; onSelect?: (word: string) => void };
+export function RelationshipBoard({ data, update, words, openNotes, embedded = false, focusWord = null, onSelect, scopeWords }: Props) {
   const [nodes, setNodes, onNodesChange] = useNodesState<KeywordNode>([]);
   const [flow, setFlow] = useState<ReactFlowInstance<KeywordNode, Edge> | null>(null);
   const canvas = useRef<HTMLDivElement>(null);
@@ -17,15 +17,15 @@ export function RelationshipBoard({ data, update, words, openNotes, embedded = f
   const [selectedWord, setSelectedWord] = useState<string | null>(null);
   const [selectedLink, setSelectedLink] = useState<string | null>(null);
   useEffect(() => { if (embedded) { setSelectedWord(focusWord); setSelectedLink(null); } }, [focusWord, embedded]);
-  const allowedWords = contextWords(data, focusWord);
+  const allowedWords = scopeWords ? new Set(scopeWords) : contextWords(data, focusWord);
   const visibleCards = data.board.cards.filter(card => !allowedWords || allowedWords.has(card.word));
   useEffect(() => {
     setNodes(previous => visibleCards.map(card => ({ id: card.word, type: 'keyword', position: { x: card.x, y: card.y }, data: { word: card.word, category: data.categories[card.word] ?? '未分類', missing: !words.includes(card.word) }, selected: embedded ? focusWord === card.word : previous.find(node => node.id === card.word)?.selected ?? false })));
-  }, [data.board.cards, data.categories, data.notes, data.links, focusWord, words.join('\u0000'), setNodes]);
+  }, [data.board.cards, data.categories, data.notes, data.links, focusWord, scopeWords?.join('\u0000'), words.join('\u0000'), setNodes]);
   const edges = useMemo<Edge[]>(() => {
     const present = new Set(visibleCards.map(card => card.word));
     return data.links.filter(link => present.has(link.a) && present.has(link.b)).map(link => ({ id: link.id, source: link.a, target: link.b, sourceHandle: data.board.cards.find(card => card.word === link.a)!.x <= data.board.cards.find(card => card.word === link.b)!.x ? 'right' : 'left', targetHandle: data.board.cards.find(card => card.word === link.a)!.x <= data.board.cards.find(card => card.word === link.b)!.x ? 'left' : 'right', type: 'straight', selected: selectedLink === link.id, ariaLabel: `*${link.a} と *${link.b} · ${link.status === 'confirmed' ? '確定' : '仮'}`, style: { stroke: link.status === 'confirmed' ? '#4c624d' : '#99a28f', strokeWidth: link.status === 'confirmed' ? 3 : 1.5, strokeDasharray: link.status === 'confirmed' ? undefined : '6 5' }, interactionWidth: 22 }));
-  }, [data.links, data.board.cards, data.notes, focusWord, selectedLink]);
+  }, [data.links, data.board.cards, data.notes, focusWord, scopeWords?.join('\u0000'), selectedLink]);
   const link = data.links.find(item => item.id === selectedLink);
   function add(word: string) {
     const rect = canvas.current?.getBoundingClientRect();
