@@ -1,0 +1,34 @@
+{
+  "name": "case-note",
+  "version": "0.1.0",
+  "description": "推理ゲームのメモ・キーワード・関係図を整理するWebアプリ",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc && vite build",
+    "test": "node --experimental-strip-types --test src/model.test.ts",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ineko0402/case-note.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/ineko0402/case-note/issues"
+  },
+  "homepage": "https://github.com/ineko0402/case-note#readme",
+  "dependencies": {
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2"
+  },
+  "private": true
+}
