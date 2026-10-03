@@ -34,3 +34,17 @@ test('migrates old backup and preserves customized version 2 settings', () => {
 test('moves an item before target and keeps other ordering intact', () => {
   assert.deepEqual(moveBefore(['a', 'b', 'c'], 'c', 'a'), ['c', 'a', 'b']);
 });
+test('organized note order stays separate from registration and filtered moves preserve hidden notes', async () => {
+  const { completeOrder, moveRelative } = await import('./model.ts');
+  const registration = ['a', 'b', 'c', 'd'];
+  const order = moveRelative(registration, 'd', 'b', false);
+  assert.deepEqual(order, ['a', 'd', 'b', 'c']);
+  assert.deepEqual(registration, ['a', 'b', 'c', 'd']);
+  assert.deepEqual(moveRelative(order, 'a', 'c', true), ['d', 'b', 'c', 'a']);
+  assert.deepEqual(completeOrder(['d', 'deleted'], registration), ['d', 'a', 'b', 'c']);
+});
+test('v2 backups without organized note order load with registration order', () => {
+  const { noteOrder, ...previous } = emptyData;
+  assert.deepEqual(validateData(previous).noteOrder, []);
+  assert.throws(() => validateData({ ...emptyData, noteOrder: ['a', 'a'] }));
+});
