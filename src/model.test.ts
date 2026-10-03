@@ -174,3 +174,9 @@ test('editing a timeline memo preserves reference time, identity and other data'
  assert.deepEqual(edited.timeline,{n:'09:00'});assert.deepEqual(edited.noteOrder,['n']);assert.deepEqual(validateData(edited),edited);
  assert.deepEqual(keywords(edited.notes[0].text),['1000','人物']);assert.equal(data.notes[0].text,'*0900 本文');assert.equal(updateNoteText(data,'n','  '),data);
 });
+
+import { placeMemoWords } from './model.ts';
+test('memo diagram places unique missing cards and preserves existing cards and relationships',()=>{
+ const data={...emptyData,board:{cards:[{word:'A',x:20,y:30}],viewport:{x:0,y:0,zoom:1}},links:[{id:'l',a:'A',b:'B',status:'confirmed' as const}]};
+ const next=placeMemoWords(data,['A','B','B','C']);assert.equal(next.board.cards.length,3);assert.deepEqual(next.board.cards[0],data.board.cards[0]);assert.deepEqual(next.links,data.links);assert.deepEqual(placeMemoWords(next,['B','C']).board,next.board);assert.ok(next.board.cards[1].x>20);assert.deepEqual(data.board.cards,[{word:'A',x:20,y:30}]);
+});

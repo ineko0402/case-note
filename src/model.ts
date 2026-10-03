@@ -195,3 +195,10 @@ export function updateNoteText(data: Data, id: string, text: string): Data {
  if (!text.trim()) return data;
  return { ...data, notes: data.notes.map(note => note.id === id ? { ...note, text } : note) };
 }
+
+export function placeMemoWords(data: Data, words: string[]): Data {
+ const unique = [...new Set(words)];
+ const startX = data.board.cards.length ? Math.max(...data.board.cards.map(card => card.x)) + 240 : 40;
+ const missing = unique.filter(word => !data.board.cards.some(card => card.word === word));
+ return { ...data, board: { ...data.board, cards: [...data.board.cards, ...missing.map((word, index) => ({word, x: startX + index % 3 * 240, y: 40 + Math.floor(index / 3) * 130}))] } };
+}
