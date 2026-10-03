@@ -5,7 +5,7 @@ import { connect, placeCard, removeCard, contextWords, type Data } from './model
 
 type KeywordNode = Node<{ word: string; category: string; missing: boolean }, 'keyword'>;
 function KeywordCard({ data }: NodeProps<KeywordNode>) {
-  return <div className="board-card"><Handle type="source" position={Position.Left} id="left" aria-label="左の接続点"/><small>{data.category}{data.missing ? ' · メモなし' : ''}</small><div>*{data.word}</div><Handle type="source" position={Position.Right} id="right" aria-label="右の接続点"/></div>;
+  return <div className="board-card"><Handle type="source" position={Position.Left} id="left" aria-label="左の接続点"/><small>分類：{data.category}{data.missing ? ' · メモなし' : ''}</small><div>*{data.word}</div><Handle type="source" position={Position.Right} id="right" aria-label="右の接続点"/></div>;
 }
 const nodeTypes = { keyword: KeywordCard };
 type Props = { data: Data; update: Dispatch<SetStateAction<Data>>; words: string[]; openNotes: (word: string) => void; embedded?: boolean; focusWord?: string | null; onSelect?: (word: string) => void };
