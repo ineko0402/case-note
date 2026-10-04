@@ -230,3 +230,5 @@ export function mergeCandidates(data: Data, source: string, search = ''): string
  const candidates = [...keywordCounts(data).keys()].filter(word => word !== source && word.includes(search));
  return [...candidates.filter(word => word.includes(source)), ...candidates.filter(word => !word.includes(source))];
 }
+
+export function freshData(): Data { return structuredClone(emptyData); }

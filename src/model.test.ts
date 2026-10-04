@@ -203,3 +203,10 @@ test('merge candidates prioritize names containing the source and retain search 
  assert.deepEqual(mergeCandidates(data,'花子'),['太郎','山田太郎','次郎','太郎さん','佐藤太郎']);
  assert.deepEqual(mergeCandidates(data,'太郎','存在しない'),[]);
 });
+
+import { freshData } from './model.ts';
+test('clearing produces independent default data without modifying current data or defaults',()=>{
+ const current={...emptyData,notes:[{id:'n',text:'*A',createdAt:'2026-10-03T00:00:00Z'}],registeredWords:['A'],timeline:{n:'09:00'}};
+ const cleared=freshData();assert.deepEqual(validateData(cleared),emptyData);assert.equal(keywordCounts(cleared).size,0);assert.equal(cleared.timeline,undefined);assert.equal(cleared.registeredWords,undefined);
+ cleared.categoryOrder.push('変更');cleared.board.cards.push({word:'X',x:0,y:0});assert.deepEqual(freshData(),emptyData);assert.equal(current.notes.length,1);assert.deepEqual(current.timeline,{n:'09:00'});
+});
