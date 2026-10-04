@@ -16,6 +16,7 @@ import { NumberRegistration } from './NumberRegistration';
 import { Timeline, TimelineSetting } from './Timeline';
 import { MemoGraphPicker } from './MemoGraphPicker';
 import { KeywordMerge } from './KeywordMerge';
+import { DataManagement } from './DataManagement';
 import './style.css';
 
 function App() {
@@ -51,7 +52,11 @@ function App() {
   const [message, setMessage] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
-  const file = useRef<HTMLInputElement>(null);
+  const [management,setManagement]=useState(false);
+  const [replacing,setReplacing]=useState(false);
+  const managementDialog=useRef<HTMLDialogElement>(null);
+  const saveTimer=useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(()=>{if(management)managementDialog.current?.showModal();},[management]);
   const [settings, setSettings] = useState(false);
   const [groupCategory, setGroupCategory] = useState<string | null>(null);
   const [linkSource, setLinkSource] = useState<string | null>(null);
@@ -73,6 +78,7 @@ function App() {
     setStatus('保存中…');
     let active = true;
     const timer = setTimeout(() => { save(data).then(() => { if (active) setStatus('このブラウザに保存済み'); }).catch(() => { if (active) setStatus('保存できません。バックアップを保存してください。'); }); }, 250);
+    saveTimer.current = timer;
     return () => { active = false; clearTimeout(timer); };
   }, [data, ready]);
   const counts = useMemo(() => keywordCounts(data), [data.notes, data.registeredWords]);
@@ -93,12 +99,18 @@ function App() {
     const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
     const anchor = document.createElement('a'); anchor.href = url; anchor.download = `case-note-${new Date().toISOString().slice(0, 10)}.json`; anchor.click(); URL.revokeObjectURL(url);
   }
-  async function restore(upload: File) {
+  async function replaceData(next: Data) {
+    setReplacing(true);
+    if(saveTimer.current)clearTimeout(saveTimer.current);
     try {
-      const imported = validateData(JSON.parse(await upload.text()));
-      if (!window.confirm('現在のメモと分類を、バックアップの内容に置き換えます。よろしいですか？')) return;
-      setData(imported); setView('notes'); setSelected(null); setEditing(null); setLinkSource(null); setGroupCategory(null); setMessage('バックアップを読み込みました。');
-    } catch { setMessage('読み込めませんでした。Case NoteのJSONバックアップを選んでください。'); }
+      await save(next);
+      setData(next);setView('notes');setSelected(null);setEditing(null);setEditText('');setLinkSource(null);setGroupCategory(null);setMemoHighlight(null);setSearch('');setRenameUndo(null);setGraphWords(undefined);setGraphNotes([]);setGraphNote(null);setSettings(false);setBatch(false);setNumbers(false);setRenaming(false);setMerging(false);setShowBoardMemos(false);setShowKeywordList(true);
+      scrollPositions.current={notes:0,keywords:0,board:0,timeline:0,sidebar:0};
+      if(notesPanel.current)notesPanel.current.scrollTop=0;
+      if(keywordPanel.current)keywordPanel.current.scrollTop=0;
+      setMessage('データを更新しました。');
+    } catch(error) { setData(previous=>({...previous}));throw error; }
+    finally {setReplacing(false);}
   }
   function selectKeyword(word: string) {
     if (linkSource) {
@@ -119,6 +131,7 @@ function App() {
     <header><div><h1>Case Note</h1><p>手がかりを、そのまま書き留める。</p></div><span className="save-status" role="status">{status}</span></header>
     <nav aria-label="表示切り替え"><button aria-pressed={view === 'notes'} onClick={() => { setView('notes'); setSelected(null); setLinkSource(null); }}>メモ</button><button aria-pressed={view === 'keywords'} onClick={() => setView('keywords')}>キーワード <span>{counts.size}</span></button><button aria-pressed={view === 'board'} onClick={() => { setView('board'); setLinkSource(null); }}>関係図</button><button aria-pressed={view === 'timeline'} onClick={() => { setView('timeline'); setSelected(null); setLinkSource(null); }}>タイムライン</button></nav>
     {!ready ? <p>{loadFailed ? 'データを保護するため入力を停止しています。' : 'メモを読み込んでいます。'}</p> : <>
+    {management && <dialog ref={managementDialog} className="settings-dialog" aria-label="データ管理" onCancel={event=>{if(replacing)event.preventDefault();else setManagement(false);}}><DataManagement data={data} backup={backup} apply={replaceData} busy={replacing} close={()=>setManagement(false)}/></dialog>}
     {merging && selected && <dialog ref={mergeDialog} className="settings-dialog" aria-label="キーワードを統合" onCancel={()=>setMerging(false)}><KeywordMerge word={selected} data={data} close={()=>setMerging(false)} apply={(next,name)=>{setRenameUndo({before:data,after:next,from:selected,to:name,graphBefore:graphWords});setData(next);if(memoHighlight===selected)setMemoHighlight(name);setSelected(name);setGraphWords(previous=>previous?[...new Set(previous.map(item=>item===selected?name:item))]:previous);}}/></dialog>}
     {renaming && selected && <dialog ref={renameDialog} className="settings-dialog" aria-label="キーワードの名前を変更" onCancel={() => setRenaming(false)}><KeywordRename word={selected} data={data} close={() => setRenaming(false)} apply={(next, name) => { setRenameUndo({ before: data, after: next, from: selected, to: name, graphBefore: graphWords }); setData(next); if (memoHighlight === selected) setMemoHighlight(name); if (linkSource === selected) setLinkSource(name); setSelected(name); setGraphWords(previous=>previous?[...new Set(previous.map(item=>item===selected?name:item))]:previous); }}/></dialog>}
     {settings && <dialog ref={settingsDialog} className="settings-dialog" aria-label="分類設定" onCancel={() => setSettings(false)}><CategorySettings data={data} update={setData} close={() => setSettings(false)}/></dialog>}
@@ -148,7 +161,7 @@ function App() {
       </div>
       </div>
     </main>}
-    <footer><p>メモはこのブラウザに保存されます。端末間の自動同期はありません。</p><div><button onClick={backup}>バックアップを保存</button><button onClick={() => file.current?.click()}>読み込む</button><input ref={file} hidden type="file" accept=".json,application/json" onChange={event => { const upload = event.target.files?.[0]; if (upload) void restore(upload); event.target.value = ''; }}/></div><p role="status">{message}</p></footer>
+    <footer><p>メモはこのブラウザに保存されます。端末間の自動同期はありません。</p><div><button onClick={()=>setManagement(true)}>データ管理</button></div><p role="status">{message}</p></footer>
     </>}
   </div>;
 }
