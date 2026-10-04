@@ -225,3 +225,8 @@ export function mergeKeywords(data: Data, from: string, to: string, category: st
  groups:data.groups.map(group=>({...group,members:[...new Set(group.members.map(word))].filter(member=>member!==to||group.category===category)})),
  board:{...data.board,cards:data.board.cards.filter(card=>!targetPlaced||card.word!==from).map(card=>({...card,word:word(card.word)}))}};
 }
+
+export function mergeCandidates(data: Data, source: string, search = ''): string[] {
+ const candidates = [...keywordCounts(data).keys()].filter(word => word !== source && word.includes(search));
+ return [...candidates.filter(word => word.includes(source)), ...candidates.filter(word => !word.includes(source))];
+}
