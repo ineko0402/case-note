@@ -48,3 +48,5 @@ article{padding:12px 14px}.note-body{line-height:1.7;font-size:13px}.note-footer
 
 .category-action{flex:none;font-size:12px;padding:6px 8px;min-height:40px;background:#f6f8f2;border-color:#cbd4c3}
 .category-heading{flex-wrap:wrap;gap:4px}.category-heading .category-toggle{min-width:100px}
+
+.timeline-filter{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;margin:0 0 10px;background:#edf2e7;border-radius:4px;font-size:13px;overflow-wrap:anywhere}.timeline-filter>span{min-width:0}.timeline-filter button{flex:none;min-height:40px;font-size:12px}
