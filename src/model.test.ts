@@ -210,3 +210,23 @@ test('clearing produces independent default data without modifying current data 
  const cleared=freshData();assert.deepEqual(validateData(cleared),emptyData);assert.equal(keywordCounts(cleared).size,0);assert.equal(cleared.timeline,undefined);assert.equal(cleared.registeredWords,undefined);
  cleared.categoryOrder.push('変更');cleared.board.cards.push({word:'X',x:0,y:0});assert.deepEqual(freshData(),emptyData);assert.equal(current.notes.length,1);assert.deepEqual(current.timeline,{n:'09:00'});
 });
+
+import { canIdentify, changeLink, identityConflicts, changeKeywordCategory } from './model.ts';
+test('identity confirmation is one-to-one, tentative candidates remain multiple, and replacement is explicit',()=>{
+ const data={...emptyData,categories:{'1':'ナンバー','2':'ナンバー',A:'人物',B:'人物',鍵:'アイテム'},links:[{id:'a',a:'1',b:'A',status:'tentative' as const},{id:'b',a:'1',b:'B',status:'tentative' as const},{id:'c',a:'2',b:'A',status:'tentative' as const},{id:'d',a:'1',b:'鍵',status:'confirmed' as const}]};
+ const first=changeLink(data,'a','identity','confirmed');assert.equal(first.links[0].kind,'identity');assert.equal(data.links[0].kind,undefined);assert.deepEqual(validateData(first),first);
+ const tentative=changeLink(first,'b','identity','tentative');assert.deepEqual(validateData(tentative),tentative);
+ assert.equal(identityConflicts(tentative,{...tentative.links[1],status:'confirmed'}).length,1);assert.throws(()=>changeLink(tentative,'b','identity','confirmed'));
+ const replaced=changeLink(tentative,'b','identity','confirmed',true);assert.equal(replaced.links[0].status,'tentative');assert.equal(replaced.links[1].status,'confirmed');assert.equal(replaced.links[3].status,'confirmed');assert.deepEqual(validateData(replaced),replaced);
+ assert.throws(()=>changeLink(first,'c','identity','confirmed'));assert.throws(()=>changeLink(first,'d','identity','confirmed'));
+ assert.equal(canIdentify(first,first.links[3]),false);assert.deepEqual(validateData(data).links,data.links);
+ assert.throws(()=>validateData({...first,links:first.links.map(link=>link.id==='b'?{...link,kind:'identity',status:'confirmed'}:link)}));
+ assert.throws(()=>validateData({...first,links:[{...first.links[0],kind:'unknown'}]}));
+});
+test('identity follows rename and category edits, while keyword merges reject ambiguous confirmed identities',()=>{
+ const data={...emptyData,registeredWords:['1','2','A','B'],categories:{'1':'ナンバー','2':'ナンバー',A:'人物',B:'人物'},links:[{id:'a',a:'1',b:'A',kind:'identity' as const,status:'confirmed' as const},{id:'b',a:'2',b:'B',kind:'identity' as const,status:'confirmed' as const}]};
+ const renamed=renameKeyword(data,'A','太郎');assert.equal(renamed.links[0].kind,'identity');assert.equal(renamed.links[0].b,'太郎');assert.deepEqual(validateData(renamed),renamed);
+ assert.deepEqual(validateData(changeKeywordCategory(data,'A','その他')).links,data.links);
+ assert.throws(()=>mergeKeywords(data,'1','2','ナンバー'));
+ const unconfirmed=changeLink(data,'b','identity','tentative');const merged=mergeKeywords(unconfirmed,'1','2','ナンバー');assert.deepEqual(validateData(merged),merged);assert.equal(merged.links.filter(link=>link.kind==='identity'&&link.status==='confirmed').length,1);
+});
