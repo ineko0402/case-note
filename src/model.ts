@@ -1,6 +1,6 @@
 export const categories = ['未分類', 'ナンバー', '人物', '場所', 'アイテム', '時間', 'その他'];
 export type Note = { id: string; text: string; createdAt: string };
-export type Link = { id: string; a: string; b: string; status: 'tentative' | 'confirmed' };
+export type Link = { kind?: 'related' | 'identity'; id: string; a: string; b: string; status: 'tentative' | 'confirmed' };
 export type Group = { id: string; name: string; category: string; members: string[]; collapsed: boolean };
 export type BoardCard = { word: string; x: number; y: number };
 export type Board = { cards: BoardCard[]; viewport: { x: number; y: number; zoom: number } };
@@ -50,8 +50,11 @@ export function validateData(value: unknown): Data {
   const groups = (data.version as number) >= 3 ? data.groups : [];
   if (!Array.isArray(links) || !Array.isArray(groups)) throw new Error('結び・まとまりの形式が違います。');
   const linkIds = new Set<string>(), pairs = new Set<string>(), groupIds = new Set<string>(), names = new Set<string>();
+  const identityWords = new Set<string>();
   for (const link of links) {
     if (!link || typeof link.id !== 'string' || !link.id || linkIds.has(link.id) || typeof link.a !== 'string' || typeof link.b !== 'string' || !link.a || !link.b || /[\s*]/u.test(link.a + link.b) || link.a === link.b || !['tentative', 'confirmed'].includes(link.status)) throw new Error('結びの形式が違います。');
+    if (link.kind !== undefined && !['related','identity'].includes(link.kind)) throw new Error('結びの種類が違います。');
+    if(link.kind === 'identity' && link.status === 'confirmed') { if(identityWords.has(link.a) || identityWords.has(link.b)) throw new Error('同一人物の確定が重複しています。');identityWords.add(link.a);identityWords.add(link.b); }
     const pair = JSON.stringify([link.a, link.b].sort());
     if (pairs.has(pair)) throw new Error('結びが重複しています。');
     pairs.add(pair); linkIds.add(link.id);
@@ -216,8 +219,9 @@ export function mergeKeywords(data: Data, from: string, to: string, category: st
   const link={...original,a:word(original.a),b:word(original.b)};
   if(link.a===link.b)continue;
   const duplicate=links.find(item=>(item.a===link.a&&item.b===link.b)||(item.a===link.b&&item.b===link.a));
-  if(duplicate){if(link.status==='confirmed')duplicate.status='confirmed';}else links.push(link);
+  if(duplicate){if(link.kind==='identity'&&duplicate.kind!=='identity'){duplicate.kind='identity';duplicate.status=link.status;}else if((link.kind??'related')===(duplicate.kind??'related')&&link.status==='confirmed')duplicate.status='confirmed';}else links.push(link);
  }
+ assertIdentityPairs(links);
  const targetPlaced=data.board.cards.some(card=>card.word===to);
  const categories=Object.fromEntries([...Object.entries(data.categories).filter(([key])=>key!==from),[to,category]]);
  const order=data.keywordOrder.includes(to)?data.keywordOrder.filter(item=>item!==from):data.keywordOrder.map(word);
@@ -232,3 +236,23 @@ export function mergeCandidates(data: Data, source: string, search = ''): string
 }
 
 export function freshData(): Data { return structuredClone(emptyData); }
+
+export function canIdentify(data: Data, link: Link): boolean {
+ if(link.kind === 'identity') return true;
+ const a=data.categories[link.a], b=data.categories[link.b];
+ return (a === 'ナンバー' && b === '人物') || (a === '人物' && b === 'ナンバー');
+}
+export function identityConflicts(data: Data, link: Link): Link[] {
+ return link.kind === 'identity' && link.status === 'confirmed' ? data.links.filter(other=>other.id!==link.id&&other.kind==='identity'&&other.status==='confirmed'&&[other.a,other.b].some(word=>word===link.a||word===link.b)) : [];
+}
+function assertIdentityPairs(links: Link[]): void {
+ const words=new Set<string>();
+ for(const link of links) if(link.kind==='identity'&&link.status==='confirmed') { if(words.has(link.a)||words.has(link.b))throw new Error('同一人物の確定が重複します。先に該当する結びを仮に戻してください。');words.add(link.a);words.add(link.b); }
+}
+export function changeLink(data: Data, id: string, kind: 'related'|'identity', status: Link['status'], replace = false): Data {
+ const current=data.links.find(link=>link.id===id);if(!current)return data;
+ if(kind==='identity'&&!canIdentify(data,current))throw new Error('同一人物はナンバーと人物の間で指定してください。');
+ const next={...current,kind,status}, conflicts=identityConflicts(data,next);
+ if(conflicts.length&&!replace)throw new Error('別の相手と同一人物として確定済みです。');
+ return {...data,links:data.links.map(link=>link.id===id?next:conflicts.some(other=>other.id===link.id)?{...link,status:'tentative'}:link)};
+}
