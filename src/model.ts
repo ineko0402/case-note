@@ -115,9 +115,10 @@ export function classifyUnassigned(data: Data, words: string[], category: string
 
 export function contextWords(data: Data, word: string | null): Set<string> | null {
   if (!word) return null;
-  const result = new Set([word]);
-  data.notes.filter(note => keywords(note.text).includes(word)).forEach(note => keywords(note.text).forEach(item => result.add(item)));
-  data.links.filter(link => link.a === word || link.b === word).forEach(link => { result.add(link.a); result.add(link.b); });
+  const members = personWords(data, word);
+  const result = new Set(members);
+  data.notes.filter(note => keywords(note.text).some(item=>members.includes(item))).forEach(note => keywords(note.text).forEach(item => result.add(item)));
+  data.links.filter(link => members.includes(link.a) || members.includes(link.b)).forEach(link => { result.add(link.a); result.add(link.b); });
   return result;
 }
 
@@ -255,4 +256,26 @@ export function changeLink(data: Data, id: string, kind: 'related'|'identity', s
  const next={...current,kind,status}, conflicts=identityConflicts(data,next);
  if(conflicts.length&&!replace)throw new Error('別の相手と同一人物として確定済みです。');
  return {...data,links:data.links.map(link=>link.id===id?next:conflicts.some(other=>other.id===link.id)?{...link,status:'tentative'}:link)};
+}
+
+export function personWords(data: Data, word: string): string[] {
+ const link=data.links.find(link=>link.kind==='identity'&&link.status==='confirmed'&&(link.a===word||link.b===word));
+ return link ? [link.a,link.b].sort((a,b)=>(data.categories[a]==='ナンバー'?0:1)-(data.categories[b]==='ナンバー'?0:1)) : [word];
+}
+export type PersonBoardCard = BoardCard & {members:string[];items:{word:string;status:Link['status']}[];noteCount:number};
+export function personBoardCards(data: Data, allowed: Set<string> | null): PersonBoardCard[] {
+ const result:PersonBoardCard[]=[], seen=new Set<string>();
+ for(const card of data.board.cards) {
+ const members=personWords(data,card.word);if(members.some(word=>seen.has(word)))continue;members.forEach(word=>seen.add(word));
+ if(allowed&&!members.some(word=>allowed.has(word)))continue;
+ const anchor=members.map(word=>data.board.cards.find(card=>card.word===word)).find(Boolean)!;
+ const items=new Map<string,Link['status']>();
+ for(const link of data.links) { const other=members.includes(link.a)?link.b:members.includes(link.b)?link.a:null;if(other&&!members.includes(other)&&data.categories[other]==='アイテム')items.set(other,items.get(other)==='confirmed'?'confirmed':link.status); }
+ result.push({...anchor,members,items:[...items].map(([word,status])=>({word,status})),noteCount:data.notes.filter(note=>keywords(note.text).some(word=>members.includes(word))).length});
+ }
+ return result;
+}
+export function movePersonCard(data: Data, anchor: string, x: number, y: number): Data {
+ const card=data.board.cards.find(card=>card.word===anchor);if(!card)return data;const members=personWords(data,anchor),dx=x-card.x,dy=y-card.y;
+ return {...data,board:{...data.board,cards:data.board.cards.map(card=>members.includes(card.word)?{...card,x:card.x+dx,y:card.y+dy}:card)}};
 }
