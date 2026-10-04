@@ -193,3 +193,13 @@ test('merging consolidates tokens, links, memberships, order and cards without c
  const next=mergeKeywords(data,'A','B','人物');assert.equal(next.notes[0].text,'A *B *AB *B');assert.equal(next.draft,'*B');assert.deepEqual(next.categories,{B:'人物'});assert.deepEqual(next.keywordOrder,['C','B']);assert.deepEqual(next.registeredWords,['B']);assert.deepEqual(next.links,[{id:'one',a:'B',b:'C',status:'confirmed'}]);assert.deepEqual(next.groups.map(g=>g.members),[['B'],[]]);assert.deepEqual(next.board.cards,[{word:'B',x:30,y:40}]);assert.deepEqual(next.timeline,data.timeline);assert.deepEqual(validateData(next),next);assert.equal(data.links[0].id,'self');assert.throws(()=>mergeKeywords(data,'A','A','人物'));assert.throws(()=>mergeKeywords(data,'A','missing','人物'));
  const onlySource={...data,board:{...data.board,cards:[{word:'A',x:1,y:2}]}};assert.deepEqual(mergeKeywords(onlySource,'A','B','人物').board.cards,[{word:'B',x:1,y:2}]);
 });
+
+import { mergeCandidates } from './model.ts';
+test('merge candidates prioritize names containing the source and retain search and stable ordering',()=>{
+ const data={...emptyData,registeredWords:['花子','太郎','山田太郎','次郎','太郎さん','佐藤太郎']};
+ assert.deepEqual(mergeCandidates(data,'太郎'),['山田太郎','太郎さん','佐藤太郎','花子','次郎']);
+ assert.deepEqual(mergeCandidates(data,'太郎','山田'),['山田太郎']);
+ assert.deepEqual(mergeCandidates(data,'太郎','花'),['花子']);
+ assert.deepEqual(mergeCandidates(data,'花子'),['太郎','山田太郎','次郎','太郎さん','佐藤太郎']);
+ assert.deepEqual(mergeCandidates(data,'太郎','存在しない'),[]);
+});
