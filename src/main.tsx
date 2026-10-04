@@ -6,7 +6,6 @@ import { KeywordEditor } from './KeywordEditor';
 import { CategorySettings } from './CategorySettings';
 import { useDragOrder } from './useDragOrder';
 import { KeywordConnections, ConnectionPicker } from './KeywordConnections';
-import { GroupSettings } from './GroupSettings';
 import { KeywordCategory } from './KeywordCategory';
 import { RelationshipBoard } from './RelationshipBoard';
 import { KeywordText } from './KeywordText';
@@ -60,10 +59,7 @@ function App() {
   const saveTimer=useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(()=>{if(management)managementDialog.current?.showModal();},[management]);
   const [settings, setSettings] = useState(false);
-  const [groupCategory, setGroupCategory] = useState<string | null>(null);
   const [linkSource, setLinkSource] = useState<string | null>(null);
-  const groupDialog = useRef<HTMLDialogElement>(null);
-  useEffect(() => { if (groupCategory) groupDialog.current?.showModal(); }, [groupCategory]);
   const settingsDialog = useRef<HTMLDialogElement>(null);
   useEffect(() => { if (settings) settingsDialog.current?.showModal(); }, [settings]);
   const notesPanel = useRef<HTMLDivElement>(null);
@@ -84,7 +80,6 @@ function App() {
     return () => { active = false; clearTimeout(timer); };
   }, [data, ready]);
   const counts = useMemo(() => keywordCounts(data), [data.notes, data.registeredWords]);
-  const hasUnclassified = [...counts.keys()].some(word => (data.categories[word] ?? '未分類') === '未分類');
   const keywordIds = completeOrder(data.keywordOrder, [...counts.keys()]);
   const noteIds = completeOrder(data.noteOrder, data.notes.map(note => note.id));
   const organizedNotes = noteIds.map(id => data.notes.find(note => note.id === id)!);
@@ -106,7 +101,7 @@ function App() {
     if(saveTimer.current)clearTimeout(saveTimer.current);
     try {
       await save(next);
-      setData(next);setMemoMode('notes');setMemoOrder('asc');setView('notes');setSelected(null);setEditing(null);setEditText('');setLinkSource(null);setGroupCategory(null);setMemoHighlight(null);setSearch('');setRenameUndo(null);setGraphWords(undefined);setGraphNotes([]);setGraphNote(null);setSettings(false);setBatch(false);setNumbers(false);setRenaming(false);setMerging(false);setShowBoardMemos(false);setShowKeywordList(true);
+      setData(next);setMemoMode('notes');setMemoOrder('asc');setView('notes');setSelected(null);setEditing(null);setEditText('');setLinkSource(null);setMemoHighlight(null);setSearch('');setRenameUndo(null);setGraphWords(undefined);setGraphNotes([]);setGraphNote(null);setSettings(false);setBatch(false);setNumbers(false);setRenaming(false);setMerging(false);setShowBoardMemos(false);setShowKeywordList(true);
       scrollPositions.current={notes:0,keywords:0,board:0,timeline:0,sidebar:0};
       if(notesPanel.current)notesPanel.current.scrollTop=0;
       if(keywordPanel.current)keywordPanel.current.scrollTop=0;
@@ -138,13 +133,12 @@ function App() {
     {merging && selected && <dialog ref={mergeDialog} className="settings-dialog" aria-label="キーワードを統合" onCancel={()=>setMerging(false)}><KeywordMerge word={selected} data={data} close={()=>setMerging(false)} apply={(next,name)=>{setRenameUndo({before:data,after:next,from:selected,to:name,graphBefore:graphWords});setData(next);if(memoHighlight===selected)setMemoHighlight(name);setSelected(name);setGraphWords(previous=>previous?[...new Set(previous.map(item=>item===selected?name:item))]:previous);}}/></dialog>}
     {renaming && selected && <dialog ref={renameDialog} className="settings-dialog" aria-label="キーワードの名前を変更" onCancel={() => setRenaming(false)}><KeywordRename word={selected} data={data} close={() => setRenaming(false)} apply={(next, name) => { setRenameUndo({ before: data, after: next, from: selected, to: name, graphBefore: graphWords }); setData(next); if (memoHighlight === selected) setMemoHighlight(name); if (linkSource === selected) setLinkSource(name); setSelected(name); setGraphWords(previous=>previous?[...new Set(previous.map(item=>item===selected?name:item))]:previous); }}/></dialog>}
     {settings && <dialog ref={settingsDialog} className="settings-dialog" aria-label="分類設定" onCancel={() => setSettings(false)}><CategorySettings data={data} update={setData} close={() => setSettings(false)}/></dialog>}
-    {groupCategory && <dialog ref={groupDialog} className="settings-dialog" aria-label="まとまり設定" onCancel={() => setGroupCategory(null)}><GroupSettings category={groupCategory} data={data} update={setData} close={() => setGroupCategory(null)}/></dialog>}
     {graphNote && data.notes.some(note => note.id === graphNote) && <dialog ref={graphDialog} className="settings-dialog" aria-label="メモのキーワードを図に追加" onCancel={() => setGraphNote(null)}><MemoGraphPicker note={data.notes.find(note => note.id === graphNote)!} close={() => setGraphNote(null)} apply={words => { const append = view === 'board' && graphWords !== undefined; setGraphNotes(previous => append ? [...new Set([...previous, graphNote])] : [graphNote]); setGraphWords(previous => append ? [...new Set([...(previous ?? []), ...words])] : words); setData(previous => placeMemoWords(previous, words)); setSelected(null); setLinkSource(null); setShowBoardMemos(true); setView('board'); setGraphNote(null); }}/></dialog>}
     {numbers && <dialog ref={numbersDialog} className="settings-dialog" aria-label="番号をまとめて追加" onCancel={() => setNumbers(false)}><NumberRegistration data={data} update={setData} close={() => setNumbers(false)}/></dialog>}
     {batch && <dialog ref={batchDialog} className="settings-dialog" aria-label="未分類の一括分類" onCancel={() => setBatch(false)}><BatchClassification data={data} words={keywordIds} update={setData} close={() => setBatch(false)}/></dialog>}
     {(view === 'notes' || view === 'timeline') && <div className="memo-view-controls" aria-label="メモの表示方法"><div className="memo-mode-switch"><button aria-pressed={view==='notes'} onClick={()=>{setMemoMode('notes');setView('notes');}}>メモ</button><button aria-pressed={view==='timeline'} onClick={()=>{setMemoMode('timeline');setView('timeline');}}>タイムライン</button></div>{view==='notes' && <label>登録順<select aria-label="メモの登録順" value={memoOrder} onChange={event=>{setMemoOrder(event.target.value as 'asc'|'desc');scrollPositions.current.notes=0;if(notesPanel.current)notesPanel.current.scrollTop=0;}}><option value="asc">古い順</option><option value="desc">新しい順</option></select></label>}</div>}
     {view === 'timeline' ? <Timeline data={data} update={setData} render={rendered} openGraph={note => setGraphNote(note.id)}/> : <main className={view !== 'notes' ? 'workspace organizing' + (showKeywordList ? '' : ' sidebar-collapsed') : 'workspace'}>
-      {view !== 'notes' && showKeywordList && <aside ref={keywordPanel} tabIndex={0} aria-label="キーワード一覧" onScroll={event => { scrollPositions.current.sidebar = event.currentTarget.scrollTop; }}><div className="list-heading"><h2>キーワード</h2><button onClick={() => setSettings(!settings)}>分類設定</button></div>{data.categoryOrder.includes('ナンバー') && <button className="batch-start" onClick={() => setNumbers(true)}>番号をまとめて追加</button>}{hasUnclassified && <button className="batch-start" onClick={() => setBatch(true)}>未分類をまとめて分類</button>}<button className="all" aria-pressed={!selected} onClick={() => setSelected(null)}>すべてのメモ <span>{data.notes.length}</span></button>{data.categoryOrder.map(category => <KeywordCategory key={category} category={category} data={data} counts={counts} selected={selected} select={selectKeyword} update={setData} settings={() => setGroupCategory(category)}/>)}{counts.size === 0 && <p className="muted">メモに *キーワード を書くと、ここに集まります。</p>}</aside>}
+      {view !== 'notes' && showKeywordList && <aside ref={keywordPanel} tabIndex={0} aria-label="キーワード一覧" onScroll={event => { scrollPositions.current.sidebar = event.currentTarget.scrollTop; }}><div className="list-heading"><h2>キーワード</h2><button onClick={() => setSettings(!settings)}>分類設定</button></div><button className="all" aria-pressed={!selected} onClick={() => setSelected(null)}>すべてのメモ <span>{data.notes.length}</span></button>{data.categoryOrder.map(category => <KeywordCategory key={category} category={category} data={data} counts={counts} selected={selected} select={selectKeyword} update={setData} classify={() => setBatch(true)} addNumbers={() => setNumbers(true)}/>)}{counts.size === 0 && <p className="muted">メモに *キーワード を書くと、ここに集まります。</p>}</aside>}
       <div className="organize-content">
         {view !== 'notes' && <div className="context-header" aria-label="選択キーワードと結び">        {selected && <div className="selection"><div><span className="keyword-kind">キーワード</span><h2>*{selected}</h2><span>{data.notes.filter(note=>keywords(note.text).some(word=>personWords(data,selected).includes(word))).length}件のメモ</span></div><label>分類<select value={data.categories[selected] ?? '未分類'} onChange={event => setData(changeKeywordCategory(data, selected, event.target.value))}>{data.categoryOrder.map(category => <option key={category}>{category}</option>)}</select></label><button onClick={() => setRenaming(true)} disabled={editing !== null || !!linkSource} title={editing !== null ? 'メモの編集を完了してから変更してください' : undefined}>名前を変更</button><button disabled={editing !== null || !!linkSource} onClick={()=>setMerging(true)}>統合</button></div>}
         {linkSource && <ConnectionPicker source={linkSource} words={keywordIds} data={data} update={setData} close={() => setLinkSource(null)}/>}

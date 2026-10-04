@@ -4,12 +4,10 @@ import { connect, type Data } from './model';
 type Props = { word: string; data: Data; update: (data: Data) => void; select: (word: string) => void; begin: () => void; isChoosing: boolean };
 export function KeywordConnections({ word, data, update, select, begin, isChoosing }: Props) {
   const links = data.links.filter(link => link.a === word || link.b === word);
-  const category = data.categories[word] ?? '未分類';
-  const groups = data.groups.filter(group => group.category === category);
-  return <section className="keyword-details" aria-label="結びとまとまり"><div className="list-heading"><h3>結び</h3><button onClick={begin} disabled={isChoosing}>結ぶ</button></div>{links.length === 0 && <p className="muted">結びなし</p>}<div className="fixed-links">{links.map(link => {
+  return <section className="keyword-details" aria-label="結び"><div className="list-heading"><h3>結び</h3><button onClick={begin} disabled={isChoosing}>結ぶ</button></div>{links.length === 0 && <p className="muted">結びなし</p>}<div className="fixed-links">{links.map(link => {
     const other = link.a === word ? link.b : link.a;
     return <div key={link.id} className={'connection ' + link.status}><span className="connection-line" aria-hidden="true"/><button className="linked-word" onClick={() => select(other)}>*{other}</button><details className="connection-actions"><summary aria-label={`*${other}の結びを操作`}>{link.kind === 'identity' ? '同一人物 · ' : ''}{link.status === 'confirmed' ? '確定' : '仮'} ▾</summary><div><LinkKindControl data={data} link={link} update={update}/><button onClick={() => updateLink(data, link, link.kind ?? 'related', link.status === 'confirmed' ? 'tentative' : 'confirmed', update)}>{link.status === 'confirmed' ? '仮に戻す' : '確定にする'}</button><button onClick={() => { if (window.confirm(`*${word} と *${other} の結びを解除しますか？`)) update({ ...data, links: data.links.filter(item => item.id !== link.id) }); }}>結びを外す</button></div></details></div>;
-  })}</div><details className="membership-details"><summary>まとまり</summary>{groups.length === 0 ? <p className="muted">左の「＋」から、この分類のまとまりを作れます。</p> : <div className="memberships">{groups.map(group => <label key={group.id}><input type="checkbox" checked={group.members.includes(word)} onChange={event => update({ ...data, groups: data.groups.map(item => item.id === group.id ? { ...item, members: event.target.checked ? [...item.members, word] : item.members.filter(member => member !== word) } : item) })}/>{group.name}</label>)}</div>}</details></section>;
+  })}</div></section>;
 }
 export function ConnectionPicker({ source, words, data, update, close }: { source: string; words: string[]; data: Data; update: (data: Data) => void; close: () => void }) {
   const [search, setSearch] = useState('');
