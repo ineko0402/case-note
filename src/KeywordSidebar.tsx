@@ -1,0 +1,7 @@
+import type { RefObject } from 'react';
+import type { Data } from './model';
+import { KeywordCategory } from './KeywordCategory';
+type Props = { data: Data; counts: Map<string, number>; selected: string | null; setSelected: (word: string | null) => void; selectKeyword: (word: string) => void; setData: (data: Data) => void; settings: boolean; setSettings: (value: boolean) => void; setBatch: (value: boolean) => void; setNumbers: (value: boolean) => void; keywordPanel: RefObject<HTMLElement | null>; onScroll: (top: number) => void };
+export function KeywordSidebar({data, counts, selected, setSelected, selectKeyword, setData, setSettings, settings, setBatch, setNumbers, keywordPanel, onScroll}: Props) {
+ return <aside ref={keywordPanel} tabIndex={0} aria-label="キーワード一覧" onScroll={event => { onScroll(event.currentTarget.scrollTop); }}><div className="list-heading"><h2>キーワード</h2><button onClick={() => setSettings(!settings)}>分類設定</button></div><button className="all" aria-pressed={!selected} onClick={() => setSelected(null)}>すべてのメモ <span>{data.notes.length}</span></button>{data.categoryOrder.map(category => <KeywordCategory key={category} category={category} data={data} counts={counts} selected={selected} select={selectKeyword} update={setData} classify={() => setBatch(true)} addNumbers={() => setNumbers(true)}/>)}{counts.size === 0 && <p className="muted">メモに *キーワード を書くと、ここに集まります。</p>}</aside>;
+}
