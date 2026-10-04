@@ -24,6 +24,8 @@ function App() {
   const [ready, setReady] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [view, setView] = useState<'notes' | 'keywords' | 'board' | 'timeline'>('notes');
+  const [memoOrder,setMemoOrder]=useState<'asc'|'desc'>('asc');
+  const [memoMode,setMemoMode]=useState<'notes'|'timeline'>('notes');
   const [showBoardMemos, setShowBoardMemos] = useState(false);
   const [memoHighlight, setMemoHighlight] = useState<string | null>(null);
   const [showKeywordList, setShowKeywordList] = useState(true);
@@ -86,7 +88,7 @@ function App() {
   const keywordIds = completeOrder(data.keywordOrder, [...counts.keys()]);
   const noteIds = completeOrder(data.noteOrder, data.notes.map(note => note.id));
   const organizedNotes = noteIds.map(id => data.notes.find(note => note.id === id)!);
-  const notes = (view === 'notes' ? data.notes : organizedNotes).filter(note => (!selected || keywords(note.text).some(word => personWords(data, selected).includes(word))) && note.text.toLocaleLowerCase().includes(search.toLocaleLowerCase()));
+  const notes = (view === 'notes' ? memoOrder === 'desc' ? [...data.notes].reverse() : data.notes : organizedNotes).filter(note => (!selected || keywords(note.text).some(word => personWords(data, selected).includes(word))) && note.text.toLocaleLowerCase().includes(search.toLocaleLowerCase()));
   const dragOrder = useDragOrder((_group, from, to, after) => setData(previous => ({ ...previous, noteOrder: moveRelative(completeOrder(previous.noteOrder, previous.notes.map(note => note.id)), from, to, after) })));
 
   function add(event: FormEvent) {
@@ -104,7 +106,7 @@ function App() {
     if(saveTimer.current)clearTimeout(saveTimer.current);
     try {
       await save(next);
-      setData(next);setView('notes');setSelected(null);setEditing(null);setEditText('');setLinkSource(null);setGroupCategory(null);setMemoHighlight(null);setSearch('');setRenameUndo(null);setGraphWords(undefined);setGraphNotes([]);setGraphNote(null);setSettings(false);setBatch(false);setNumbers(false);setRenaming(false);setMerging(false);setShowBoardMemos(false);setShowKeywordList(true);
+      setData(next);setMemoMode('notes');setMemoOrder('asc');setView('notes');setSelected(null);setEditing(null);setEditText('');setLinkSource(null);setGroupCategory(null);setMemoHighlight(null);setSearch('');setRenameUndo(null);setGraphWords(undefined);setGraphNotes([]);setGraphNote(null);setSettings(false);setBatch(false);setNumbers(false);setRenaming(false);setMerging(false);setShowBoardMemos(false);setShowKeywordList(true);
       scrollPositions.current={notes:0,keywords:0,board:0,timeline:0,sidebar:0};
       if(notesPanel.current)notesPanel.current.scrollTop=0;
       if(keywordPanel.current)keywordPanel.current.scrollTop=0;
@@ -129,8 +131,8 @@ function App() {
     return <KeywordText text={text} active={activeKeyword} related={relatedWords} onSelect={word => { if (view === 'notes') setMemoHighlight(memoHighlight === word ? null : word); else selectKeyword(word); }}/>;
   }
   return <div className={'app ' + (view === 'keywords' ? 'keyword-view' : view === 'board' ? 'board-view' : 'memo-view') + (showKeywordList ? '' : ' list-hidden')}>
-    <header><div><h1>Case Note</h1><p>手がかりを、そのまま書き留める。</p></div><span className="save-status" role="status">{status}</span></header>
-    <nav aria-label="表示切り替え"><button aria-pressed={view === 'notes'} onClick={() => { setView('notes'); setSelected(null); setLinkSource(null); }}>メモ</button><button aria-pressed={view === 'keywords'} onClick={() => setView('keywords')}>キーワード <span>{counts.size}</span></button><button aria-pressed={view === 'board'} onClick={() => { setView('board'); setLinkSource(null); }}>関係図</button><button aria-pressed={view === 'timeline'} onClick={() => { setView('timeline'); setSelected(null); setLinkSource(null); }}>タイムライン</button></nav>
+    <header><div><h1>Case Note</h1><p>手がかりを、そのまま書き留める。</p></div></header>
+    <nav aria-label="表示切り替え"><button aria-pressed={view === 'notes' || view === 'timeline'} onClick={() => { setView(memoMode); setSelected(null); setLinkSource(null); }}>メモ</button><button aria-pressed={view === 'keywords'} onClick={() => setView('keywords')}>キーワード <span>{counts.size}</span></button><button aria-pressed={view === 'board'} onClick={() => { setView('board'); setLinkSource(null); }}>関係図</button></nav>
     {!ready ? <p>{loadFailed ? 'データを保護するため入力を停止しています。' : 'メモを読み込んでいます。'}</p> : <>
     {management && <dialog ref={managementDialog} className="settings-dialog" aria-label="データ管理" onCancel={event=>{if(replacing)event.preventDefault();else setManagement(false);}}><DataManagement data={data} backup={backup} apply={replaceData} busy={replacing} close={()=>setManagement(false)}/></dialog>}
     {merging && selected && <dialog ref={mergeDialog} className="settings-dialog" aria-label="キーワードを統合" onCancel={()=>setMerging(false)}><KeywordMerge word={selected} data={data} close={()=>setMerging(false)} apply={(next,name)=>{setRenameUndo({before:data,after:next,from:selected,to:name,graphBefore:graphWords});setData(next);if(memoHighlight===selected)setMemoHighlight(name);setSelected(name);setGraphWords(previous=>previous?[...new Set(previous.map(item=>item===selected?name:item))]:previous);}}/></dialog>}
@@ -140,6 +142,7 @@ function App() {
     {graphNote && data.notes.some(note => note.id === graphNote) && <dialog ref={graphDialog} className="settings-dialog" aria-label="メモのキーワードを図に追加" onCancel={() => setGraphNote(null)}><MemoGraphPicker note={data.notes.find(note => note.id === graphNote)!} close={() => setGraphNote(null)} apply={words => { const append = view === 'board' && graphWords !== undefined; setGraphNotes(previous => append ? [...new Set([...previous, graphNote])] : [graphNote]); setGraphWords(previous => append ? [...new Set([...(previous ?? []), ...words])] : words); setData(previous => placeMemoWords(previous, words)); setSelected(null); setLinkSource(null); setShowBoardMemos(true); setView('board'); setGraphNote(null); }}/></dialog>}
     {numbers && <dialog ref={numbersDialog} className="settings-dialog" aria-label="番号をまとめて追加" onCancel={() => setNumbers(false)}><NumberRegistration data={data} update={setData} close={() => setNumbers(false)}/></dialog>}
     {batch && <dialog ref={batchDialog} className="settings-dialog" aria-label="未分類の一括分類" onCancel={() => setBatch(false)}><BatchClassification data={data} words={keywordIds} update={setData} close={() => setBatch(false)}/></dialog>}
+    {(view === 'notes' || view === 'timeline') && <div className="memo-view-controls" aria-label="メモの表示方法"><div className="memo-mode-switch"><button aria-pressed={view==='notes'} onClick={()=>{setMemoMode('notes');setView('notes');}}>メモ</button><button aria-pressed={view==='timeline'} onClick={()=>{setMemoMode('timeline');setView('timeline');}}>タイムライン</button></div>{view==='notes' && <label>登録順<select aria-label="メモの登録順" value={memoOrder} onChange={event=>{setMemoOrder(event.target.value as 'asc'|'desc');scrollPositions.current.notes=0;if(notesPanel.current)notesPanel.current.scrollTop=0;}}><option value="asc">古い順</option><option value="desc">新しい順</option></select></label>}</div>}
     {view === 'timeline' ? <Timeline data={data} update={setData} render={rendered} openGraph={note => setGraphNote(note.id)}/> : <main className={view !== 'notes' ? 'workspace organizing' + (showKeywordList ? '' : ' sidebar-collapsed') : 'workspace'}>
       {view !== 'notes' && showKeywordList && <aside ref={keywordPanel} tabIndex={0} aria-label="キーワード一覧" onScroll={event => { scrollPositions.current.sidebar = event.currentTarget.scrollTop; }}><div className="list-heading"><h2>キーワード</h2><button onClick={() => setSettings(!settings)}>分類設定</button></div>{data.categoryOrder.includes('ナンバー') && <button className="batch-start" onClick={() => setNumbers(true)}>番号をまとめて追加</button>}{hasUnclassified && <button className="batch-start" onClick={() => setBatch(true)}>未分類をまとめて分類</button>}<button className="all" aria-pressed={!selected} onClick={() => setSelected(null)}>すべてのメモ <span>{data.notes.length}</span></button>{data.categoryOrder.map(category => <KeywordCategory key={category} category={category} data={data} counts={counts} selected={selected} select={selectKeyword} update={setData} settings={() => setGroupCategory(category)}/>)}{counts.size === 0 && <p className="muted">メモに *キーワード を書くと、ここに集まります。</p>}</aside>}
       <div className="organize-content">
@@ -156,13 +159,13 @@ function App() {
         {view === 'notes' && <form className="composer" onSubmit={add}><label htmlFor="draft">新しいメモ</label><KeywordEditor id="draft" placeholder="文章を書いて選択すると、キーワードにできます" value={data.draft} registered={new Set(counts.keys())} onChange={value => setData({ ...data, draft: value })} onSubmitShortcut={() => add({ preventDefault() {} } as FormEvent)}/><div className="composer-bottom"><small>*から空白までがキーワード</small><button className="primary" disabled={!data.draft.trim()}>追加</button></div></form>}
         <div className="list-heading"><h2>{selected ? '関連するメモ' : 'メモ'} <span>{notes.length}</span></h2><input aria-label="メモを検索" type="search" placeholder="メモを検索" value={search} onChange={event => setSearch(event.target.value)}/></div>
         {notes.length === 0 && <div className="empty"><p>{data.notes.length ? '該当するメモはありません。' : 'まだメモはありません。'}</p>{!data.notes.length && <p>番号も名前も時間も、まずは別々のキーワードで。<br/>分類や並べ替えは、あとから考えましょう。</p>}</div>}
-        <p className="order-hint">{view === 'notes' ? '登録順' : '整理順 · ハンドルをドラッグして並べ替え'}</p>
+        <p className="order-hint">{view === 'notes' ? memoOrder==='desc'?'登録順 · 新しい順':'登録順 · 古い順' : '整理順 · ハンドルをドラッグして並べ替え'}</p>
         <div className="note-list">{notes.map((note, index) => <article key={note.id} {...(view !== 'notes' && editing !== note.id ? dragOrder.row('notes', note.id) : {})}>{view !== 'notes' && editing !== note.id && <div className="note-sort"><button className="drag-handle" aria-label="メモをドラッグして並べ替え" {...dragOrder.handle('notes', note.id)}>⠿</button><div><button aria-label="メモを上へ" disabled={index === 0} onClick={() => setData({ ...data, noteOrder: moveRelative(noteIds, note.id, notes[index - 1].id, false) })}>↑</button><button aria-label="メモを下へ" disabled={index === notes.length - 1} onClick={() => setData({ ...data, noteOrder: moveRelative(noteIds, note.id, notes[index + 1].id, true) })}>↓</button></div></div>}{editing === note.id ? <form onSubmit={event => { event.preventDefault(); if (!editText.trim()) return; setData(updateNoteText(data, note.id, editText)); setEditing(null); }}><KeywordEditor label="メモを編集" autoFocus value={editText} onChange={setEditText} registered={new Set(counts.keys())}/><div className="actions"><button type="button" onClick={() => setEditing(null)}>キャンセル</button><button className="primary" disabled={!editText.trim()}>保存</button></div></form> : <><div className="note-body">{rendered(note.text)}</div><TimelineSetting note={note} data={data} update={setData}/><div className="note-footer"><time dateTime={note.createdAt}>{new Date(note.createdAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</time><div><button disabled={!keywords(note.text).length} onClick={() => setGraphNote(note.id)}>{view === 'board' && graphWords ? '図に追加' : 'このメモを図で見る'}</button><button onClick={() => { setEditing(note.id); setEditText(note.text); }}>編集</button><button onClick={() => { if (window.confirm('このメモを削除しますか？')) setData({ ...data, notes: data.notes.filter(item => item.id !== note.id), timeline: Object.fromEntries(Object.entries(data.timeline ?? {}).filter(([id]) => id !== note.id)) }); }}>削除</button></div></div></>}</article>)}</div>
       </div>
       </div>
       </div>
     </main>}
-    <footer><p>メモはこのブラウザに保存されます。端末間の自動同期はありません。</p><div><button onClick={()=>setManagement(true)}>データ管理</button></div><p role="status">{message}</p></footer>
+    <footer><span className="save-status" role="status">{status}</span><p>メモはこのブラウザに保存されます。端末間の自動同期はありません。</p><div><button onClick={()=>setManagement(true)}>データ管理</button></div><p role="status">{message}</p></footer>
     </>}
   </div>;
 }
