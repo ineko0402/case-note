@@ -230,3 +230,13 @@ test('identity follows rename and category edits, while keyword merges reject am
  assert.throws(()=>mergeKeywords(data,'1','2','ナンバー'));
  const unconfirmed=changeLink(data,'b','identity','tentative');const merged=mergeKeywords(unconfirmed,'1','2','ナンバー');assert.deepEqual(validateData(merged),merged);assert.equal(merged.links.filter(link=>link.kind==='identity'&&link.status==='confirmed').length,1);
 });
+
+import { personWords, personBoardCards, movePersonCard, contextWords } from './model.ts';
+test('person card combines confirmed identities, deduplicates notes and items and splits without data loss',()=>{
+ const data={...emptyData,notes:[{id:'a',text:'*1 *太郎 *鍵',createdAt:'2026-10-03T00:00:00Z'},{id:'b',text:'*太郎',createdAt:'2026-10-03T00:00:00Z'}],categories:{'1':'ナンバー',太郎:'人物',鍵:'アイテム'},links:[{id:'id',a:'1',b:'太郎',kind:'identity' as const,status:'confirmed' as const},{id:'item1',a:'1',b:'鍵',status:'tentative' as const},{id:'item2',a:'太郎',b:'鍵',status:'confirmed' as const}],board:{cards:[{word:'1',x:10,y:20},{word:'太郎',x:80,y:90},{word:'鍵',x:200,y:300}],viewport:{x:0,y:0,zoom:1}}};
+ assert.deepEqual(personWords(data,'太郎'),['1','太郎']);const cards=personBoardCards(data,null);assert.equal(cards.length,2);assert.deepEqual(cards[0].members,['1','太郎']);assert.equal(cards[0].noteCount,2);assert.deepEqual(cards[0].items,[{word:'鍵',status:'confirmed'}]);assert.equal(personBoardCards(data,new Set(['太郎'])).length,1);
+ const moved=movePersonCard(data,'1',40,50);assert.deepEqual(moved.board.cards.slice(0,2),[{word:'1',x:40,y:50},{word:'太郎',x:110,y:120}]);assert.deepEqual(moved.links,data.links);assert.deepEqual(moved.notes,data.notes);
+ const split=changeLink(moved,'id','identity','tentative');assert.equal(personBoardCards(split,null).length,3);assert.deepEqual(split.board.cards,moved.board.cards);assert.deepEqual(validateData(split),split);
+ const onePlaced={...data,board:{...data.board,cards:[{word:'太郎',x:80,y:90}]}};assert.equal(personBoardCards(onePlaced,null)[0].word,'太郎');assert.equal(personBoardCards(onePlaced,null)[0].members.length,2);
+ assert.ok(contextWords(data,'1')?.has('鍵'));assert.equal(data.board.cards[0].x,10);
+});

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createRoot } from 'react-dom/client';
-import { emptyData, placeMemoWords, updateNoteText, keywordCounts, keywords, connect, changeKeywordCategory, moveRelative, completeOrder, validateData, type Data } from './model';
+import { emptyData, personWords, placeMemoWords, updateNoteText, keywordCounts, keywords, connect, changeKeywordCategory, moveRelative, completeOrder, validateData, type Data } from './model';
 import { load, save } from './storage';
 import { KeywordEditor } from './KeywordEditor';
 import { CategorySettings } from './CategorySettings';
@@ -86,7 +86,7 @@ function App() {
   const keywordIds = completeOrder(data.keywordOrder, [...counts.keys()]);
   const noteIds = completeOrder(data.noteOrder, data.notes.map(note => note.id));
   const organizedNotes = noteIds.map(id => data.notes.find(note => note.id === id)!);
-  const notes = (view === 'notes' ? data.notes : organizedNotes).filter(note => (!selected || keywords(note.text).includes(selected)) && note.text.toLocaleLowerCase().includes(search.toLocaleLowerCase()));
+  const notes = (view === 'notes' ? data.notes : organizedNotes).filter(note => (!selected || keywords(note.text).some(word => personWords(data, selected).includes(word))) && note.text.toLocaleLowerCase().includes(search.toLocaleLowerCase()));
   const dragOrder = useDragOrder((_group, from, to, after) => setData(previous => ({ ...previous, noteOrder: moveRelative(completeOrder(previous.noteOrder, previous.notes.map(note => note.id)), from, to, after) })));
 
   function add(event: FormEvent) {
@@ -123,7 +123,8 @@ function App() {
     setSelected(previous => previous === word ? null : word); if (view !== 'board') setView('keywords');
   }
   const activeKeyword = view === 'notes' ? memoHighlight : linkSource ?? selected;
-  const relatedWords = new Set(data.links.filter(link => link.a === activeKeyword || link.b === activeKeyword).map(link => link.a === activeKeyword ? link.b : link.a));
+  const activeMembers=activeKeyword?personWords(data,activeKeyword):[];
+  const relatedWords = new Set([...activeMembers.filter(word=>word!==activeKeyword),...data.links.filter(link=>activeMembers.includes(link.a)||activeMembers.includes(link.b)).flatMap(link=>[link.a,link.b]).filter(word=>word!==activeKeyword)]);
   function rendered(text: string) {
     return <KeywordText text={text} active={activeKeyword} related={relatedWords} onSelect={word => { if (view === 'notes') setMemoHighlight(memoHighlight === word ? null : word); else selectKeyword(word); }}/>;
   }
@@ -142,7 +143,7 @@ function App() {
     {view === 'timeline' ? <Timeline data={data} update={setData} render={rendered} openGraph={note => setGraphNote(note.id)}/> : <main className={view !== 'notes' ? 'workspace organizing' + (showKeywordList ? '' : ' sidebar-collapsed') : 'workspace'}>
       {view !== 'notes' && showKeywordList && <aside ref={keywordPanel} tabIndex={0} aria-label="キーワード一覧" onScroll={event => { scrollPositions.current.sidebar = event.currentTarget.scrollTop; }}><div className="list-heading"><h2>キーワード</h2><button onClick={() => setSettings(!settings)}>分類設定</button></div>{data.categoryOrder.includes('ナンバー') && <button className="batch-start" onClick={() => setNumbers(true)}>番号をまとめて追加</button>}{hasUnclassified && <button className="batch-start" onClick={() => setBatch(true)}>未分類をまとめて分類</button>}<button className="all" aria-pressed={!selected} onClick={() => setSelected(null)}>すべてのメモ <span>{data.notes.length}</span></button>{data.categoryOrder.map(category => <KeywordCategory key={category} category={category} data={data} counts={counts} selected={selected} select={selectKeyword} update={setData} settings={() => setGroupCategory(category)}/>)}{counts.size === 0 && <p className="muted">メモに *キーワード を書くと、ここに集まります。</p>}</aside>}
       <div className="organize-content">
-        {view !== 'notes' && <div className="context-header" aria-label="選択キーワードと結び">        {selected && <div className="selection"><div><span className="keyword-kind">キーワード</span><h2>*{selected}</h2><span>{counts.get(selected) ?? 0}件のメモ</span></div><label>分類<select value={data.categories[selected] ?? '未分類'} onChange={event => setData(changeKeywordCategory(data, selected, event.target.value))}>{data.categoryOrder.map(category => <option key={category}>{category}</option>)}</select></label><button onClick={() => setRenaming(true)} disabled={editing !== null || !!linkSource} title={editing !== null ? 'メモの編集を完了してから変更してください' : undefined}>名前を変更</button><button disabled={editing !== null || !!linkSource} onClick={()=>setMerging(true)}>統合</button></div>}
+        {view !== 'notes' && <div className="context-header" aria-label="選択キーワードと結び">        {selected && <div className="selection"><div><span className="keyword-kind">キーワード</span><h2>*{selected}</h2><span>{data.notes.filter(note=>keywords(note.text).some(word=>personWords(data,selected).includes(word))).length}件のメモ</span></div><label>分類<select value={data.categories[selected] ?? '未分類'} onChange={event => setData(changeKeywordCategory(data, selected, event.target.value))}>{data.categoryOrder.map(category => <option key={category}>{category}</option>)}</select></label><button onClick={() => setRenaming(true)} disabled={editing !== null || !!linkSource} title={editing !== null ? 'メモの編集を完了してから変更してください' : undefined}>名前を変更</button><button disabled={editing !== null || !!linkSource} onClick={()=>setMerging(true)}>統合</button></div>}
         {linkSource && <ConnectionPicker source={linkSource} words={keywordIds} data={data} update={setData} close={() => setLinkSource(null)}/>}
         {selected && <KeywordConnections word={selected} data={data} update={setData} select={selectKeyword} begin={() => setLinkSource(selected)} isChoosing={!!linkSource}/>}
 <div className="organize-switch"><button aria-expanded={showKeywordList} onClick={() => setShowKeywordList(!showKeywordList)}>{showKeywordList ? 'キーワード一覧を隠す' : 'キーワード一覧を表示'}</button>{view === 'board' && <button aria-pressed={showBoardMemos} onClick={() => setShowBoardMemos(!showBoardMemos)}>{showBoardMemos ? '関連メモを隠す' : '関連メモを表示'}</button>}</div></div>}
