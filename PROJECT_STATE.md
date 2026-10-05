@@ -176,3 +176,5 @@ personWordsは確定identityの両端を返す。personBoardCardsは保存され
 
 ## UIの構成
 main.tsxは起動処理のみ。App.tsxは保存・画面選択・共有編集状態・ダイアログの調整を担当。AppNavigationはタブ切替、KeywordSidebarは分類別キーワード一覧、KeywordContextは選択語の詳細と結び、MemoListはメモの並び替え・本文・編集操作を担当。Timeline、ConnectionsOverviewは独立した画面。廃止した関係図の画面用状態と参照を削除し、旧保存データは維持。
+## 常設メモ追加と呼び方
+操作は「つなげる」、関係は「つながり」に統一。固定の「＋ メモ」からどのタブでも新規メモを入力。既存下書きを共有し、閉じても破棄しない。追加後は元のタブ・検索・選択を維持する。

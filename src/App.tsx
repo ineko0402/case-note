@@ -17,7 +17,10 @@ import { DataManagement } from './DataManagement';
 import { MemoList } from './MemoList';
 import { AppNavigation } from './AppNavigation';
 
+import { QuickMemo } from './QuickMemo';
+
 export function App() {
+  const [quickMemo, setQuickMemo] = useState(false);
   const [data, setData] = useState<Data>(emptyData);
   const [ready, setReady] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -121,6 +124,8 @@ export function App() {
   return <div className={'app ' + (view === 'keywords' ? 'keyword-view' : view === 'board' ? 'board-view' : 'memo-view') + (showKeywordList ? '' : ' list-hidden')}>
     <header><div><h1>Case Note</h1><p>手がかりを、そのまま書き留める。</p></div></header>
     <AppNavigation view={view} memoMode={memoMode} count={counts.size} setView={setView} setSelected={setSelected} setLinkSource={setLinkSource}/>
+    {ready && <button className="quick-add primary" onClick={()=>setQuickMemo(true)}>＋ メモ</button>}
+    {ready && quickMemo && <QuickMemo data={data} update={setData} close={()=>setQuickMemo(false)}/>}
     {!ready ? <p>{loadFailed ? 'データを保護するため入力を停止しています。' : 'メモを読み込んでいます。'}</p> : <>
     {management && <dialog ref={managementDialog} className="settings-dialog" aria-label="データ管理" onCancel={event=>{if(replacing)event.preventDefault();else setManagement(false);}}><DataManagement data={data} backup={backup} apply={replaceData} busy={replacing} close={()=>setManagement(false)}/></dialog>}
     {merging && selected && <dialog ref={mergeDialog} className="settings-dialog" aria-label="キーワードを統合" onCancel={()=>setMerging(false)}><KeywordMerge word={selected} data={data} close={()=>setMerging(false)} apply={(next,name)=>{setRenameUndo({before:data,after:next,from:selected,to:name});setData(next);if(memoHighlight===selected)setMemoHighlight(name);setSelected(name);}}/></dialog>}
