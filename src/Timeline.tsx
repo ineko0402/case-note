@@ -3,10 +3,11 @@ import { TimelineBulk } from './TimelineBulk';
 import { KeywordText } from './KeywordText';
 import { KeywordEditor } from './KeywordEditor';
 import { keywords, personWords, keywordCounts, updateNoteText, noteTimes, setTimeline, timelineNotes, type Data, type Note } from './model';
+import { hasTimeKeyword } from './inputHelp';
 export function TimelineSetting({note,data,update}: {note: Note; data: Data; update: (data: Data) => void}) {
  const enabled=Object.hasOwn(data.timeline ?? {},note.id), time=data.timeline?.[note.id] ?? null;
  const candidates=noteTimes(data,note);
- return <details className="timeline-setting"><summary>{enabled ? `タイムライン：${time ?? '時刻不明'}` : 'タイムラインに表示'}</summary><label><input type="checkbox" checked={enabled} onChange={event=>update(setTimeline(data,note.id,event.target.checked))}/>タイムラインに表示</label>{enabled && <><label>基準時刻<input type="time" aria-label="タイムラインの基準時刻" value={time ?? ''} onChange={event=>update(setTimeline(data,note.id,true,event.target.value || null))}/></label>{candidates.length>1 && <p>複数の時刻があります。並べる基準を選んでください。</p>}<div className="time-candidates">{candidates.map(value=><button key={value} type="button" aria-pressed={time===value} onClick={()=>update(setTimeline(data,note.id,true,value))}>{value}</button>)}<button type="button" onClick={()=>update(setTimeline(data,note.id,true,null))}>時刻不明にする</button></div></>}</details>;
+ return <details className="timeline-setting"><summary>{enabled ? `タイムライン：${time ?? '時刻不明'}` : hasTimeKeyword(data,note) ? 'タイムラインに表示' : '時刻不明でタイムラインに追加'}</summary><label><input type="checkbox" checked={enabled} onChange={event=>update(setTimeline(data,note.id,event.target.checked))}/>タイムラインに表示</label>{enabled && <><label>基準時刻<input type="time" aria-label="タイムラインの基準時刻" value={time ?? ''} onChange={event=>update(setTimeline(data,note.id,true,event.target.value || null))}/></label>{candidates.length>1 && <p>複数の時刻があります。並べる基準を選んでください。</p>}<div className="time-candidates">{candidates.map(value=><button key={value} type="button" aria-pressed={time===value} onClick={()=>update(setTimeline(data,note.id,true,value))}>{value}</button>)}<button type="button" onClick={()=>update(setTimeline(data,note.id,true,null))}>時刻不明にする</button></div></>}</details>;
 }
 export function Timeline({data,update,openGraph}: {openGraph?: (note: Note) => void; data: Data; update: (data: Data) => void}) {
  const [search,setSearch]=useState('');
