@@ -19,6 +19,7 @@ import { AppNavigation } from './AppNavigation';
 
 import { QuickMemo } from './QuickMemo';
 
+import { KeywordDragProvider } from './KeywordDrag';
 export function App() {
   const [quickMemo, setQuickMemo] = useState(false);
   const [data, setData] = useState<Data>(emptyData);
@@ -121,7 +122,7 @@ export function App() {
   function rendered(text: string) {
     return <KeywordText text={text} active={activeKeyword} related={relatedWords} onSelect={word => { if (view === 'notes') setMemoHighlight(memoHighlight === word ? null : word); else selectKeyword(word); }}/>;
   }
-  return <div className={'app ' + (view === 'keywords' ? 'keyword-view' : view === 'board' ? 'board-view' : 'memo-view') + (showKeywordList ? '' : ' list-hidden')}>
+  return <KeywordDragProvider data={data} update={setData}><div className={'app ' + (view === 'keywords' ? 'keyword-view' : view === 'board' ? 'board-view' : 'memo-view') + (showKeywordList ? '' : ' list-hidden')}>
     <header><div><h1>Case Note</h1><p>手がかりを、そのまま書き留める。</p></div></header>
     <AppNavigation view={view} memoMode={memoMode} count={counts.size} setView={setView} setSelected={setSelected} setLinkSource={setLinkSource}/>
     {ready && <button className="quick-add primary" onClick={()=>setQuickMemo(true)}>＋ メモ</button>}
@@ -154,5 +155,5 @@ export function App() {
     </main>}
     <footer><span className="save-status" role="status">{status}</span><p>メモはこのブラウザに保存されます。端末間の自動同期はありません。</p><div><button onClick={()=>setManagement(true)}>データ管理</button></div><p role="status">{message}</p></footer>
     </>}
-  </div>;
+  </div></KeywordDragProvider>;
 }
