@@ -1,7 +1,11 @@
-.note-sort-main{display:flex;align-items:center;gap:6px;min-width:0}
-.note-sort-main>.timeline-setting,.note-footer .timeline-setting,.timeline-card-heading>.timeline-setting{margin-top:0}
-.note-sort .note-sort-main .timeline-clock{padding:0;border:1px solid #dcded8;background:#fff}
-.note-sort .note-sort-main .timeline-clock.is-enabled{background:#e9eee5;border-color:#b8c4b2}
-.timeline-card-heading{display:flex;align-items:center;gap:8px;margin-bottom:4px}
-.timeline-card-heading>.timeline-time{margin-bottom:0}
-.note-footer .timeline-setting{flex:none}
+.note-card-heading,.timeline-card-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.note-sort-main,.timeline-heading-main{display:flex;align-items:center;gap:6px;min-width:0}
+.note-sort-main>.timeline-setting,.timeline-heading-main>.timeline-setting{margin-top:0}
+.timeline-heading-main>.timeline-time{margin-bottom:0}
+.memo-card-actions,.memo-move-actions{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.memo-card-actions{margin-left:auto;justify-content:flex-end}
+.memo-card-actions>.icon-button{border:0;background:transparent}
+.memo-card-actions>.icon-button:hover{background:#eeefea;color:#30352f}
+.note-card-heading .drag-handle{min-width:40px;min-height:40px}
+.connecting-memos .note-card-heading{display:none}
+@media(pointer:coarse){.note-card-heading .drag-handle{min-width:44px;min-height:44px}}
