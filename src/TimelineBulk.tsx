@@ -1,3 +1,4 @@
+import { SearchField } from './SearchField';
 import { useState } from 'react';
 import { noteTimes, addTimelineNotes, type Data } from './model';
 import { hasTimeKeyword } from './inputHelp';
@@ -23,7 +24,7 @@ export function TimelineBulk({data, update, close}: {data: Data; update: (data: 
     <div className="timeline-bulk-heading"><h2>タイムラインにまとめて追加</h2><p className="muted">登録済みのメモは除外しています。載せたいメモを選んでください。</p></div>
     <div className="timeline-bulk-body">
       <label className="timeline-bulk-option"><input type="checkbox" checked={includeUntimed} onChange={event => {setIncludeUntimed(event.target.checked); setSelected([]);}}/>時間なしのメモも候補に含める</label>
-      <div className="timeline-bulk-search"><input type="search" aria-label="追加するメモを検索" placeholder="メモを検索" value={search} onChange={event => setSearch(event.target.value)}/>{search && <button onClick={() => setSearch('')}>検索を解除</button>}</div>
+      <div className="timeline-bulk-search"><SearchField label="追加するメモを検索" placeholder="メモを検索" value={search} onChange={setSearch}/></div>
       <div className="timeline-bulk-tools"><button disabled={!visible.length} onClick={() => setSelected(previous => [...new Set([...previous, ...visible.map(note => note.id)])])}>表示中をすべて選択</button><button disabled={!selected.length} onClick={() => setSelected([])}>選択を解除</button><span>表示 {visible.length}件</span></div>
       <div className="timeline-bulk-list">{visible.map(note => {
         const checked = selected.includes(note.id);

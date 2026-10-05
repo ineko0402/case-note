@@ -1,3 +1,4 @@
+import { SearchField } from './SearchField';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { emptyData, personWords, keywordCounts, keywords, connect, moveRelative, completeOrder, validateData, type Data } from './model';
 import { load, save } from './storage';
@@ -196,7 +197,7 @@ export function App() {
         {view === 'board' && !memoConnecting && <ConnectionsOverview data={data} select={selectKeyword} openNotes={word => { setSelected(word); setShowBoardMemos(true); }}/>}
       <div hidden={view === 'board' && !showBoardMemos && !memoConnecting} className="notes-panel" ref={notesPanel} tabIndex={0} role="region" aria-label={view === 'notes' ? 'メモ一覧' : '関連メモ一覧'} onScroll={event => { scrollPositions.current[view] = event.currentTarget.scrollTop; }}>
         {view === 'notes' && !smallScreen && <form className="composer" onSubmit={add}><label htmlFor="draft">新しいメモ</label><KeywordEditor id="draft" placeholder="文章を書いて選択すると、キーワードにできます" value={data.draft} registered={new Set(counts.keys())} onChange={value => setData({ ...data, draft: value })} onSubmitShortcut={() => add({ preventDefault() {} } as FormEvent)}/><div className="composer-bottom"><small>*から空白までがキーワード</small><button className="primary" disabled={!data.draft.trim()}>追加</button></div></form>}
-        <div className="list-heading"><h2>{selected ? '関連するメモ' : 'メモ'} <span>{notes.length}</span></h2><input aria-label="メモを検索" type="search" placeholder="メモを検索" value={search} onChange={event => setSearch(event.target.value)}/>{memoConnecting && search && <button onClick={() => setSearch('')}>メモ検索を解除</button>}</div>
+        <div className="list-heading"><h2>{selected ? '関連するメモ' : 'メモ'} <span>{notes.length}</span></h2><SearchField label="メモを検索" placeholder="メモを検索" value={search} onChange={setSearch}/></div>
         {notes.length === 0 && <div className="empty"><p>{data.notes.length ? '該当するメモはありません。' : 'まだメモはありません。'}</p>{!data.notes.length && <p>番号も名前も時間も、まずは別々のキーワードで。<br/>分類や並べ替えは、あとから考えましょう。</p>}</div>}
         <p className="order-hint">{view === 'notes' ? memoOrder==='desc'?'登録順 · 新しい順':'登録順 · 古い順' : '整理順 · ハンドルをドラッグして並べ替え'}</p>
         <MemoList data={data} notes={notes} counts={counts} view={view} editing={editing} editText={editText} setEditText={setEditText} setEditing={setEditing} setData={setData} dragOrder={dragOrder} noteIds={noteIds} rendered={rendered}/>

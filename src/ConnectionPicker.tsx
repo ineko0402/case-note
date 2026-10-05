@@ -1,3 +1,4 @@
+import { SearchField } from './SearchField';
 import { useEffect, useRef } from 'react';
 import type { ConnectionCandidate, ConnectionOptions } from './connectionCandidates';
 import './ConnectionPicker.css';
@@ -15,7 +16,7 @@ function ConnectionControls({source, categories, options, change, close}: Props)
     <div className="connect-modes" aria-label="相手の選び方"><button type="button" aria-pressed={options.mode === 'list'} onClick={() => change({...options, mode: 'list', target: null})}>一覧から選ぶ</button><button type="button" aria-pressed={options.mode === 'memo'} onClick={() => change({...options, mode: 'memo', target: null})}>メモから選ぶ</button></div>
     <div className="connect-filters">
       <label>相手の分類<select value={options.category ?? ''} onChange={event => filter({category: event.target.value || null})}><option value="">すべての分類</option>{categories.map(category => <option key={category} value={category}>{category}</option>)}</select></label>
-      <input type="search" aria-label="つなげる相手を検索" placeholder="相手のキーワードを検索" value={options.query} onChange={event => filter({query: event.target.value})}/>
+      <SearchField label="つなげる相手を検索" placeholder="相手のキーワードを検索" value={options.query} onChange={query => filter({query})}/>
       {(options.category !== null || options.query || options.onlyShared || options.hideConnected) && <button type="button" onClick={() => filter({category: null, query: '', onlyShared: false, hideConnected: false})}>絞り込みを解除</button>}
     </div>
     <div className="connect-checks">{options.mode === 'list' && <label><input type="checkbox" checked={options.onlyShared} onChange={event => filter({onlyShared: event.target.checked})}/>同じメモで使った相手のみ</label>}<label><input type="checkbox" checked={options.hideConnected} onChange={event => filter({hideConnected: event.target.checked})}/>つながり済みを隠す</label></div>
