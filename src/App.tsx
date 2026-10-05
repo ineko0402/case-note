@@ -20,12 +20,18 @@ import { AppNavigation } from './AppNavigation';
 import { QuickMemo } from './QuickMemo';
 
 import { KeywordDragProvider } from './KeywordDrag';
+import { useSmallScreen } from './useSmallScreen';
 export function App() {
+  const smallScreen = useSmallScreen();
   const [quickMemo, setQuickMemo] = useState(false);
   const [data, setData] = useState<Data>(emptyData);
   const [ready, setReady] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [view, setView] = useState<'notes' | 'keywords' | 'board' | 'timeline'>('notes');
+  useEffect(() => {
+    document.documentElement.classList.toggle('mobile-memo-page', smallScreen && (view === 'notes' || view === 'timeline'));
+    return () => document.documentElement.classList.remove('mobile-memo-page');
+  }, [smallScreen, view]);
   const [memoOrder,setMemoOrder]=useState<'asc'|'desc'>('asc');
   const [memoMode,setMemoMode]=useState<'notes'|'timeline'>('notes');
   const [showBoardMemos, setShowBoardMemos] = useState(false);
@@ -144,7 +150,7 @@ export function App() {
         <div className={'organize-body ' + (view === 'board' ? 'with-board' : '')}>
         {view === 'board' && <ConnectionsOverview data={data} select={selectKeyword} openNotes={word => { setSelected(word); setShowBoardMemos(true); }}/>}
       <div hidden={view === 'board' && !showBoardMemos} className="notes-panel" ref={notesPanel} tabIndex={0} role="region" aria-label={view === 'notes' ? 'メモ一覧' : '関連メモ一覧'} onScroll={event => { scrollPositions.current[view] = event.currentTarget.scrollTop; }}>
-        {view === 'notes' && <form className="composer" onSubmit={add}><label htmlFor="draft">新しいメモ</label><KeywordEditor id="draft" placeholder="文章を書いて選択すると、キーワードにできます" value={data.draft} registered={new Set(counts.keys())} onChange={value => setData({ ...data, draft: value })} onSubmitShortcut={() => add({ preventDefault() {} } as FormEvent)}/><div className="composer-bottom"><small>*から空白までがキーワード</small><button className="primary" disabled={!data.draft.trim()}>追加</button></div></form>}
+        {view === 'notes' && !smallScreen && <form className="composer" onSubmit={add}><label htmlFor="draft">新しいメモ</label><KeywordEditor id="draft" placeholder="文章を書いて選択すると、キーワードにできます" value={data.draft} registered={new Set(counts.keys())} onChange={value => setData({ ...data, draft: value })} onSubmitShortcut={() => add({ preventDefault() {} } as FormEvent)}/><div className="composer-bottom"><small>*から空白までがキーワード</small><button className="primary" disabled={!data.draft.trim()}>追加</button></div></form>}
         <div className="list-heading"><h2>{selected ? '関連するメモ' : 'メモ'} <span>{notes.length}</span></h2><input aria-label="メモを検索" type="search" placeholder="メモを検索" value={search} onChange={event => setSearch(event.target.value)}/></div>
         {notes.length === 0 && <div className="empty"><p>{data.notes.length ? '該当するメモはありません。' : 'まだメモはありません。'}</p>{!data.notes.length && <p>番号も名前も時間も、まずは別々のキーワードで。<br/>分類や並べ替えは、あとから考えましょう。</p>}</div>}
         <p className="order-hint">{view === 'notes' ? memoOrder==='desc'?'登録順 · 新しい順':'登録順 · 古い順' : '整理順 · ハンドルをドラッグして並べ替え'}</p>

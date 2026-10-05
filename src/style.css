@@ -55,3 +55,29 @@ article{padding:12px 14px}.note-body{line-height:1.7;font-size:13px}.note-footer
 .quick-add{position:fixed;right:24px;bottom:76px;z-index:10;min-width:100px;min-height:44px;box-shadow:0 2px 8px #0002}
 .keyword-suggestions{margin:0 0 8px;font-size:12px}.keyword-suggestions>div{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}.keyword-suggestions button{font-size:12px;min-height:40px;overflow-wrap:anywhere;max-width:100%}
 [data-connect-target]{outline:3px solid #5d7660!important;outline-offset:2px;background:#dce8d2!important}.drag-connect-status{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);max-width:80%;z-index:12;background:#eff4e8;padding:8px 12px;border-radius:5px;font-size:12px;pointer-events:none}.drag-connect-status:empty{display:none}
+/* New and edited memos share a viewport-aware dialog. */
+.memo-dialog{position:fixed;inset:auto;margin:0;left:50%;top:calc(var(--memo-vtop,0px) + 8px);transform:translateX(-50%);width:min(640px,calc(100% - 16px));max-height:calc(var(--memo-vh,100dvh) - 16px);overflow:hidden;scrollbar-gutter:auto;padding:0}
+.memo-dialog form{display:flex;flex-direction:column;max-height:inherit;min-height:0}
+.memo-dialog-heading{flex:none;padding:12px 14px;border-bottom:1px solid #e0e2db}
+.memo-dialog-body{padding:12px 14px;overflow:auto;min-height:0}
+.memo-dialog-actions{flex:none;display:flex;justify-content:flex-end;gap:8px;padding:8px 14px;border-top:1px solid #e0e2db;background:#fff}
+.memo-dialog-actions button{min-height:44px}
+@media(max-width:650px){
+ .app.memo-view{height:auto;min-height:100dvh;display:flex;overflow:visible}
+ .app.memo-view>.workspace{flex:none;width:100%;overflow:visible;min-height:0}
+ .app.memo-view .organize-content,.app.memo-view .organize-body,.app.memo-view .notes-panel{overflow:visible;flex:none;min-height:0}
+ .app.memo-view>header,.app.memo-view>nav,.app.memo-view>footer{position:static;flex:none}
+ .app.memo-view>footer{margin-top:16px;padding-bottom:80px}
+ .app.memo-view>.timeline-panel{overflow:visible}
+ .memo-dialog{height:calc(var(--memo-vh,100dvh) - 16px)}
+ .memo-dialog form{height:100%}
+ .memo-dialog-heading{padding:8px 12px}
+ .memo-dialog-body{flex:1;padding:8px 12px;display:flex}
+ .memo-dialog .keyword-editor{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
+ .memo-dialog .keyword-editor .editor-input{height:auto!important;min-height:72px;max-height:none;flex:1;resize:none;font-size:16px}
+ .memo-dialog .draft-keywords,.memo-dialog .keyword-suggestions,.memo-dialog .keyword-popup{flex:none;max-height:25%;overflow:auto;margin-bottom:6px}
+ .memo-dialog-actions{padding:6px 12px}
+ input,textarea,select{font-size:16px}
+}
+.memo-keyword-picker{width:100%;font-size:13px;overflow:auto}.memo-keyword-picker>p{margin-bottom:10px}.memo-dialog-actions{flex-wrap:wrap}.memo-dialog-actions>button:first-child{margin-right:auto}
+html.mobile-memo-page,html.mobile-memo-page body,html.mobile-memo-page #root{height:auto;overflow:visible}
