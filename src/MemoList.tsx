@@ -1,7 +1,7 @@
 import { useRef, type ReactNode } from 'react';
 import { updateNoteText, moveRelative, type Data, type Note } from './model';
 import { KeywordEditor } from './KeywordEditor';
-import { TimelineSetting } from './Timeline';
+import { TimelineSetting } from './TimelineSetting';
 import type { useDragOrder } from './useDragOrder';
 import { MemoDialog } from './MemoDialog';
 import { useSmallScreen } from './useSmallScreen';
