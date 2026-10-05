@@ -1,0 +1,7 @@
+.note-sort-main{display:flex;align-items:center;gap:6px;min-width:0}
+.note-sort-main>.timeline-setting,.note-footer .timeline-setting,.timeline-card-heading>.timeline-setting{margin-top:0}
+.note-sort .note-sort-main .timeline-clock{padding:0;border:1px solid #dcded8;background:#fff}
+.note-sort .note-sort-main .timeline-clock.is-enabled{background:#e9eee5;border-color:#b8c4b2}
+.timeline-card-heading{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.timeline-card-heading>.timeline-time{margin-bottom:0}
+.note-footer .timeline-setting{flex:none}
