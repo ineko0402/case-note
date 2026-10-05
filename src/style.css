@@ -81,3 +81,13 @@ article{padding:12px 14px}.note-body{line-height:1.7;font-size:13px}.note-footer
 }
 .memo-keyword-picker{width:100%;font-size:13px;overflow:auto}.memo-keyword-picker>p{margin-bottom:10px}.memo-dialog-actions{flex-wrap:wrap}.memo-dialog-actions>button:first-child{margin-right:auto}
 html.mobile-memo-page,html.mobile-memo-page body,html.mobile-memo-page #root{height:auto;overflow:visible}
+.context-header .keyword-operation-card{width:100%;margin:0;padding:10px 12px;gap:12px 20px;align-items:center;background:#f1f4ed;border:1px solid #d5decd;border-radius:8px}
+.keyword-operation-card .selected-keyword-summary{flex:1 1 180px}
+.keyword-operation-card .selected-keyword-summary h2{display:inline-block;margin:4px 8px 4px 0;background:white}
+.keyword-operation-card .keyword-actions{flex:1 1 320px;min-width:0}
+.keyword-actions h3{margin:0 0 6px;font-size:13px;color:#4b614a}
+.keyword-action-controls{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+.keyword-action-controls label{display:flex;align-items:center;gap:6px}
+.keyword-action-controls button{background:white}
+.keyword-action-help{margin:6px 0 0;font-size:12px}
+@media(max-width:650px){.context-header .keyword-operation-card{gap:6px;padding:8px 10px}.keyword-operation-card .selected-keyword-summary,.keyword-operation-card .keyword-actions{flex-basis:100%}}
