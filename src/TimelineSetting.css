@@ -1,4 +1,9 @@
-.timeline-setting>button{font-size:12px}
+.timeline-setting{display:flex;align-items:center;gap:8px}
+.timeline-setting>.timeline-clock{display:inline-flex;align-items:center;justify-content:center;flex:none;width:40px;height:40px;padding:0;color:#606b59}
+.timeline-setting>.timeline-clock.is-enabled{color:#415c43;background:#e9eee5;border-color:#b8c4b2}
+.timeline-clock svg{display:block}
+.timeline-clock-time{font-size:12px;font-variant-numeric:tabular-nums}
+@media(pointer:coarse){.timeline-setting>.timeline-clock{width:44px;height:44px}}
 dialog.timeline-setting-dialog{width:calc(100% - 24px);max-width:560px;max-height:calc(var(--timeline-vh,100dvh) - 24px);top:calc(var(--timeline-vtop,0px) + 12px);bottom:auto;margin:0 auto}
 .timeline-setting-dialog form{display:flex;flex-direction:column;max-height:calc(var(--timeline-vh,100dvh) - 26px)}
 .timeline-dialog-heading{flex:none;margin:0;padding:14px 16px;font-size:18px;border-bottom:1px solid #dcded8}
