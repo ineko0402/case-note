@@ -1,0 +1,12 @@
+.timeline-setting>button{font-size:12px}
+dialog.timeline-setting-dialog{width:calc(100% - 24px);max-width:560px;max-height:calc(var(--timeline-vh,100dvh) - 24px);top:calc(var(--timeline-vtop,0px) + 12px);bottom:auto;margin:0 auto}
+.timeline-setting-dialog form{display:flex;flex-direction:column;max-height:calc(var(--timeline-vh,100dvh) - 26px)}
+.timeline-dialog-heading{flex:none;margin:0;padding:14px 16px;font-size:18px;border-bottom:1px solid #dcded8}
+.timeline-dialog-body{min-height:0;overflow:auto;padding:12px 16px;overscroll-behavior:contain}
+.timeline-dialog-body h3{margin:0 0 6px;font-size:13px;color:#606b59}
+.timeline-dialog-note{max-height:140px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f5f1;padding:10px;border-radius:4px;margin:0 0 16px}
+.timeline-dialog-body label{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.timeline-dialog-body input[type=time]{font-size:16px;min-height:44px}
+.timeline-dialog-body .time-candidates button{min-height:44px;min-width:64px;font-variant-numeric:tabular-nums}
+.timeline-dialog-actions{flex:none;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;padding:10px 16px;border-top:1px solid #dcded8}
+.timeline-dialog-actions>button:first-child:not(:nth-last-child(2)){margin-right:auto}
