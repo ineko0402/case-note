@@ -1,0 +1,37 @@
+dialog.connect-dialog{width:calc(100% - 24px);max-width:900px;height:min(760px,calc(var(--connect-vh,100dvh) - 24px));max-height:calc(var(--connect-vh,100dvh) - 24px);top:calc(var(--connect-vtop,0px) + 12px);bottom:auto;margin:0 auto;overflow:hidden;scrollbar-gutter:auto}
+.connect-dialog[open]{display:flex;flex-direction:column}
+.connect-dialog-footer{flex:none;padding:0 16px 10px;border-top:1px solid #dcded8;background:#f5f7f1;max-height:35%;overflow:auto}
+.context-header .selection>.keyword-actions{display:block}
+.context-header .keyword-details>.list-heading{flex-wrap:wrap;max-width:100%}
+.connect-dialog-controls{flex:0 1 auto;min-height:0;padding:12px 16px;border-bottom:1px solid #dcded8;background:#f5f7f1;max-height:45%;overflow:auto}
+.connect-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.connect-heading h2{font-size:16px;margin:0;overflow-wrap:anywhere}
+.connect-modes,.connect-filters,.connect-checks,.connect-meta{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin-top:8px}
+.connect-filters input[type=search]{flex:1;min-width:170px}
+.connect-filters label,.connect-checks label,.connect-meta label{display:flex;align-items:center;gap:6px;font-size:13px}
+.connect-checks input,.connect-meta input{width:18px;height:18px;flex:none;accent-color:#4c624d}
+.connect-modes button[aria-pressed=true],.connect-chips button[aria-pressed=true]{background:#dce7d3;border-color:#819775}
+.connect-selection{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:10px;padding:8px 10px;background:white;border:1px solid #cbd7c1;border-radius:5px;font-size:13px}
+.connect-selection span{overflow-wrap:anywhere;min-width:0;flex:1}
+.connect-selection small{display:block}
+.connect-feedback{font-size:12px;margin:6px 0 0;color:#52654a;min-height:18px}
+.connect-feedback{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px}
+.connect-feedback button{min-height:32px;font-size:12px;padding:4px 8px}
+.connect-meta{font-size:12px;justify-content:space-between;color:#606b59}
+.connect-candidates{flex:1;min-height:80px;overflow:auto;scrollbar-gutter:stable;padding:12px 16px;overscroll-behavior:contain}
+.connect-candidates h3{font-size:13px;margin:12px 0 6px;color:#475841;background:#e9ede3;padding:6px;border-radius:4px}
+.connect-candidates h3 span{font-weight:400;margin-left:8px}
+.connect-chips{display:flex;flex-wrap:wrap;gap:8px}
+.connect-chips button{display:flex;flex-direction:column;align-items:flex-start;max-width:100%;overflow-wrap:anywhere;min-height:44px;text-align:left;font-size:13px;padding:7px 10px}
+.connect-chips small{font-size:11px;color:#606b59}
+.connect-chips .shared-candidate{border-color:#9cb28d;background:#f0f5ea}
+.connect-memo-toolbar{flex:none;margin-bottom:8px;padding:10px 12px;border:1px solid #cbd7c1;border-radius:6px;background:#f5f7f1;max-height:48%;overflow:auto;scrollbar-gutter:stable}
+.connect-memo-toolbar .connect-heading h2{font-size:14px}
+.connect-memo-toolbar .connect-modes button,.connect-memo-toolbar .connect-filters button,.connect-memo-toolbar .connect-filters select{min-height:36px;padding:5px 8px;font-size:12px}
+.connectable-keyword{background:#e8efdf;border:1px solid #91a77f;color:#304529}
+.connectable-keyword[aria-pressed=true]{background:#cdddbe;border:2px solid #657e51}
+.connection-unavailable{opacity:.55}
+.organize-body.connecting-memos{display:flex;flex-direction:column;min-height:0}
+.app.connecting-view{height:var(--connect-memo-vh,100dvh)}
+.connecting-memos .note-sort,.connecting-memos .timeline-setting,.connecting-memos .note-footer button{display:none}
+@media(max-width:650px){.app.connecting-view>header,.app.connecting-view>nav,.app.connecting-view>footer{display:none}.connect-dialog-controls{padding:8px 10px}.connect-candidates{padding:8px 10px}.connect-memo-toolbar{max-height:55%;padding:8px}.connect-heading button,.connect-modes button,.connect-filters button,.connect-selection button{min-height:44px}.connect-filters select,.connect-filters input[type=search]{font-size:16px;min-height:44px}.connect-filters{gap:6px}.connect-checks,.connect-meta{gap:6px}.connect-feedback{font-size:11px}}
