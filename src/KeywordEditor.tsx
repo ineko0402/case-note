@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { keywordize, keywords, selectionWords } from './model';
 import { keywordSuggestions } from './inputHelp';
-type Props = { value: string; onChange: (value: string) => void; registered: Set<string>; id?: string; label?: string; placeholder?: string; autoFocus?: boolean; onSubmitShortcut?: () => void };
-export function KeywordEditor({ value, onChange, registered, id, label, placeholder, autoFocus, onSubmitShortcut }: Props) {
+type Props = { value: string; onChange: (value: string) => void; registered: Set<string>; id?: string; label?: string; placeholder?: string; autoFocus?: boolean; onSubmitShortcut?: () => void; fitViewport?: boolean };
+export function KeywordEditor({ value, onChange, registered, id, label, placeholder, autoFocus, onSubmitShortcut, fitViewport = false }: Props) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const heightKey = 'case-note-editor-height';
   useEffect(() => {
     const element = ref.current;
     if (!element) return;
+    if (fitViewport) { element.style.removeProperty('height'); return; }
     try {
       const saved = Number(localStorage.getItem(heightKey));
       if (saved >= 120 && saved <= 600) element.style.height = saved + 'px';
@@ -17,7 +18,7 @@ export function KeywordEditor({ value, onChange, registered, id, label, placehol
     });
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [fitViewport]);
   const [composing, setComposing] = useState(false);
   const suggestions = composing ? [] : keywordSuggestions(value, registered);
   const draftWords = keywords(value);
