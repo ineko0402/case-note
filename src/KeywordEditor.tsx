@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { keywordize, keywords, selectionWords } from './model';
+import { keywordSuggestions } from './inputHelp';
 type Props = { value: string; onChange: (value: string) => void; registered: Set<string>; id?: string; label?: string; placeholder?: string; autoFocus?: boolean; onSubmitShortcut?: () => void };
 export function KeywordEditor({ value, onChange, registered, id, label, placeholder, autoFocus, onSubmitShortcut }: Props) {
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -17,6 +18,8 @@ export function KeywordEditor({ value, onChange, registered, id, label, placehol
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
+  const [composing, setComposing] = useState(false);
+  const suggestions = composing ? [] : keywordSuggestions(value, registered);
   const draftWords = keywords(value);
   const [selection, setSelection] = useState<{ start: number; end: number } | null>(null);
   const [error, setError] = useState('');
@@ -38,7 +41,8 @@ export function KeywordEditor({ value, onChange, registered, id, label, placehol
   return <div className="keyword-editor" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setSelection(null); }}>
     {draftWords.length > 0 && <div className="draft-keywords" role="region" aria-label="入力中のキーワード"><small>キーワード</small><div>{draftWords.map(word => <span className="draft-keyword" key={word}>*{word}</span>)}</div></div>}
     {selection && words.length > 0 && <div className="keyword-popup" role="group" aria-label="選択した文章をキーワード化" onMouseDown={event => event.preventDefault()}><div className="preview">{words.map((word, index) => <span key={index}>*{word} {registered.has(word) && <small>登録済</small>}</span>)}</div><div className="actions"><button type="button" onClick={() => apply(false)}>{words.length === 1 ? 'キーワードにする' : '分けて登録'}</button>{words.length > 1 && !/[\r\n]/u.test(selected) && <button type="button" onClick={() => apply(true)}>空白を除いて1個にする</button>}<button type="button" onClick={() => setSelection(null)} aria-label="キーワード化を閉じる">閉じる</button></div>{error && <p role="alert">{error}</p>}</div>}
-    <textarea className="editor-input" ref={ref} id={id} aria-label={label} autoFocus={autoFocus} placeholder={placeholder} value={value} onChange={event => { onChange(event.target.value); setSelection(null); }} onSelect={capture} onKeyDown={event => { if (!event.nativeEvent.isComposing && event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); onSubmitShortcut?.(); } if (event.key === 'Escape') setSelection(null); }}/>
+    {suggestions.length > 0 && <div className="keyword-suggestions" aria-label="登録済みキーワードの候補"><small>キーワードにする候補（1か所ずつ）</small><div>{suggestions.map(item=><button type="button" key={item.word} onClick={()=>{const result=keywordize(value,item.start,item.end,false);onChange(result.text);setSelection(null);requestAnimationFrame(()=>{ref.current?.focus();ref.current?.setSelectionRange(result.caret,result.caret);});}}>*{item.word}</button>)}</div></div>}
+    <textarea onCompositionStart={()=>setComposing(true)} onCompositionEnd={()=>setComposing(false)} className="editor-input" ref={ref} id={id} aria-label={label} autoFocus={autoFocus} placeholder={placeholder} value={value} onChange={event => { onChange(event.target.value); setSelection(null); }} onSelect={capture} onKeyDown={event => { if (!event.nativeEvent.isComposing && event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); onSubmitShortcut?.(); } if (event.key === 'Escape') setSelection(null); }}/>
 
   </div>;
 }
