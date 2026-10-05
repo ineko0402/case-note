@@ -1,3 +1,5 @@
+import { Icon } from './Icon';
+import './Icon.css';
 import { useEffect, useRef, useState } from 'react';
 import { noteTimes, setTimeline, type Data, type Note } from './model';
 import './TimelineSetting.css';
@@ -7,10 +9,13 @@ type Props = { note: Note; data: Data; update: (data: Data) => void };
 export function TimelineSetting({note, data, update}: Props) {
   const [open, setOpen] = useState(false);
   const enabled = Object.hasOwn(data.timeline ?? {}, note.id);
+  const time = data.timeline?.[note.id] ?? '時刻不明';
+  const label = enabled ? `タイムラインの設定：${time}` : 'タイムラインに追加';
   return <div className="timeline-setting">
-    <button type="button" aria-haspopup="dialog" onClick={() => setOpen(true)}>
-      {enabled ? `タイムライン設定：${data.timeline?.[note.id] ?? '時刻不明'}` : 'タイムラインに追加'}
+    <button className={`timeline-clock${enabled ? ' is-enabled' : ''}`} type="button" aria-label={label} title={label} aria-haspopup="dialog" onClick={() => setOpen(true)}>
+      <Icon name="schedule"/>
     </button>
+    {enabled && <span className="timeline-clock-time">{time}</span>}
     {open && <TimelineSettingDialog note={note} data={data} update={update} close={() => setOpen(false)}/>}
   </div>;
 }
