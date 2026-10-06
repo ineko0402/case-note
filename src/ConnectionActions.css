@@ -1,0 +1,34 @@
+dialog.action-menu{position:fixed;inset:auto;margin:0;padding:12px;border:1px solid #c7d2bf;border-radius:8px;background:#fff;color:#30352f;box-shadow:0 8px 28px #25352133;z-index:1000;overflow:auto;overscroll-behavior:contain;font-size:14px}
+.action-menu::backdrop{background:#20281d55}
+.action-menu-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.action-menu-heading strong{min-width:0;overflow-wrap:anywhere;font-size:14px}
+.action-menu-heading button{flex:none}
+.action-menu-body,.action-menu-body .keyword-action-controls{display:flex;flex-direction:column;align-items:stretch;gap:8px}
+.action-menu-body .keyword-action-controls label,.action-menu-body .link-kind{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px}
+.action-menu-body select{flex:1;min-width:0;font-size:14px}
+.context-header .keyword-operation-card{padding:6px 8px;gap:6px 12px}
+.keyword-operation-card .selected-keyword-summary{flex:1;min-width:0}
+.context-header .keyword-operation-card .keyword-actions{flex:0 0 auto}
+.selected-keyword-summary h2{font-size:16px}
+.context-header .keyword-details>.list-heading{display:flex;justify-content:space-between;margin:0 0 4px;gap:8px}
+.context-header .keyword-details{flex-basis:100%}
+.context-header .fixed-links{max-height:180px}
+.connection{gap:6px;flex-wrap:wrap;padding:3px 0}
+.connection .linked-word{font-size:14px;min-width:0}
+.connection-kind{font-size:12px;color:#606b59}
+.connection button.connection-toggle{border-style:dashed;background:#f4f6f1;color:#64725e;min-width:44px}
+.connection button.connection-toggle[aria-pressed=true]{border-style:solid;border-color:#4c624d;background:#4c624d;color:white;font-weight:600}
+.connection-line{width:18px}
+@media(min-width:651px) and (pointer:fine){
+  .context-header button{min-height:30px;padding:4px 8px;font-size:13px}
+  .organize-switch button{font-size:12px}
+  .note-sort button,.note-sort button.icon-button,.note-sort .drag-handle{width:30px;height:30px;min-width:30px;min-height:30px;padding:0}
+  .note-sort .app-icon{width:19px;height:19px}
+  .note-body{font-size:14px;line-height:1.75}
+  .action-menu button,.action-menu select{min-height:32px;padding:5px 8px}
+}
+@media(max-width:650px),(pointer:coarse){
+  .context-header .connection button,.context-header .list-heading button,.keyword-actions>button,.action-menu button{min-height:44px}
+  .action-menu select{font-size:16px;min-height:44px}
+  .connection .linked-word{font-size:14px}
+}
