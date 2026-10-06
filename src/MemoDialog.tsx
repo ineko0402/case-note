@@ -69,7 +69,7 @@ export function MemoDialog({title,value,onChange,registered,submitLabel,submit,c
       <div className="memo-dialog-body">
         <KeywordEditor label={title+'の本文'} value={value} onChange={onChange} registered={registered} fitViewport={small} selectionEnabled={!choosing} onSubmitShortcut={choosing ? undefined : submit}>
           {choosing && <section className="memo-keyword-picker" aria-label="キーワード候補">
-            <div className="candidate-tools"><button type="button" onClick={refreshCandidates}>候補を更新</button><button type="button" onClick={()=>{setChoosing(false);setError('');}}>選択を閉じる</button></div>
+            <div className="candidate-tools"><button type="button" onClick={refreshCandidates}>候補を更新</button></div>
             <p role="status">{dirty ? '文章が変わりました。「候補を更新」で選び直せます。' : '選んだ語だけキーワードにします。上の入力欄でスペースや表記を直せます。'}</p>
             {['登録済み','登録候補'].map(group=><section key={group}><h3>{group}</h3><div className="batch-picker">{candidates.filter(item=>item.registered===(group==='登録済み')).map(item=><button type="button" disabled={dirty} className="batch-chip" aria-pressed={checked.includes(item.word)} key={item.word} onClick={()=>setChecked(previous=>previous.includes(item.word)?previous.filter(word=>word!==item.word):[...previous,item.word])}>{checked.includes(item.word)?'✓ ':''}{item.word} <small>{item.ranges.length}か所</small></button>)}</div></section>)}
             {!candidates.length && <p>スペースで区切った語や、かっこで囲った語が候補になります。</p>}
@@ -77,7 +77,7 @@ export function MemoDialog({title,value,onChange,registered,submitLabel,submit,c
           </section>}
         </KeywordEditor>
       </div>
-      <div className="memo-dialog-actions"><button type="button" disabled={choosing && (dirty || !chosen.length)} onClick={keywordAction}>{choosing ? chosen.length+'語を適用' : 'キーワード化'}</button><button type="button" onClick={close}>閉じる</button><button className="primary" disabled={!value.trim() || choosing}>{submitLabel}</button></div>
+      <div className="memo-dialog-actions"><button type="button" onClick={choosing ? ()=>{setChoosing(false);setError('');} : keywordAction}>{choosing ? '入力に戻る' : 'キーワード化'}</button><button type="button" onClick={close}>閉じる</button><button type={choosing ? 'button' : 'submit'} className="primary" disabled={choosing ? dirty || !chosen.length : !value.trim()} onClick={choosing ? keywordAction : undefined}>{choosing ? chosen.length+'語を適用' : submitLabel}</button></div>
     </form>
   </dialog>;
 }

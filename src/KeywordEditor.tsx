@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { keywordize, keywords, selectionWords } from './model';
 import { keywordSuggestions } from './inputHelp';
-import { inputCandidates } from './inputCandidates';
+import { inputCandidates, applyInputCandidates, type InputCandidate } from './inputCandidates';
 type Props = { value: string; onChange: (value: string) => void; registered: Set<string>; id?: string; label?: string; placeholder?: string; autoFocus?: boolean; onSubmitShortcut?: () => void; fitViewport?: boolean; children?: ReactNode; selectionEnabled?: boolean };
 export function KeywordEditor({ value, onChange, registered, id, label, placeholder, autoFocus, onSubmitShortcut, fitViewport = false, children, selectionEnabled = true }: Props) {
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -42,13 +42,18 @@ export function KeywordEditor({ value, onChange, registered, id, label, placehol
       requestAnimationFrame(() => { ref.current?.focus(); ref.current?.setSelectionRange(result.caret, result.caret); });
     } catch (cause) { setError((cause as Error).message); }
   }
+  function applyCandidate(item: InputCandidate) {
+    onChange(applyInputCandidates(value, value, [item], [item.word]));
+    setSelection(null); setError('');
+    requestAnimationFrame(() => ref.current?.focus({preventScroll: true}));
+  }
   return <div className="keyword-editor" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setSelection(null); }}>
     <textarea onCompositionStart={()=>setComposing(true)} onCompositionEnd={()=>setComposing(false)} className="editor-input" ref={ref} id={id} aria-label={label} autoFocus={autoFocus} placeholder={placeholder} value={value} onChange={event => { onChange(event.target.value); setSelection(null); }} onSelect={capture} onKeyDown={event => { if (!event.nativeEvent.isComposing && event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); onSubmitShortcut?.(); } if (event.key === 'Escape') setSelection(null); }}/>
     {draftWords.length > 0 && <div className="draft-keywords" role="region" aria-label="入力中のキーワード"><small>キーワード</small><div>{draftWords.map(word => <span className="draft-keyword" key={word}>*{word}</span>)}</div></div>}
     {selectionEnabled && selection && words.length > 0 && <div className="keyword-popup" role="group" aria-label="選択した文章をキーワード化" onMouseDown={event => event.preventDefault()}><div className="preview">{words.map((word, index) => <span key={index}>*{word} {registered.has(word) && <small>登録済</small>}</span>)}</div><div className="actions"><button type="button" onClick={() => apply(false)}>{words.length === 1 ? 'キーワードにする' : '分けて登録'}</button>{words.length > 1 && !/[\r\n]/u.test(selected) && <button type="button" onClick={() => apply(true)}>空白を除いて1個にする</button>}<button type="button" onClick={() => setSelection(null)} aria-label="キーワード化を閉じる">閉じる</button></div>{error && <p role="alert">{error}</p>}</div>}
     {!children && suggestions.length > 0 && <div className="keyword-suggestions" aria-label="登録済みキーワードの候補"><small>キーワードにする候補（1か所ずつ）</small><div>{suggestions.map(item=><button type="button" key={item.word} onClick={()=>{const result=keywordize(value,item.start,item.end,false);onChange(result.text);setSelection(null);requestAnimationFrame(()=>{ref.current?.focus();ref.current?.setSelectionRange(result.caret,result.caret);});}}>*{item.word}</button>)}</div></div>}
 
-    {!children && newCandidates.length > 0 && <div className="draft-keywords" aria-label="未登録のキーワード候補"><small>登録候補</small><div>{newCandidates.map(item => <span className="draft-keyword" key={item.word}>{item.word}</span>)}</div></div>}
+    {!children && newCandidates.length > 0 && <div className="draft-keywords" aria-label="未登録のキーワード候補"><small>登録候補</small><div>{newCandidates.map(item => <button type="button" className="draft-keyword draft-keyword-button" key={item.word} aria-label={`${item.word}をキーワードにする（${item.ranges.length}か所）`} title={`${item.word}をキーワードにする（${item.ranges.length}か所）`} onClick={() => applyCandidate(item)}>{item.word}</button>)}</div></div>}
     {children}
   </div>;
 }

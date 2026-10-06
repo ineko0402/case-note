@@ -10,6 +10,9 @@
 .keyword-editor .draft-keywords,.keyword-editor .keyword-suggestions,.keyword-editor .keyword-popup{margin:8px 0 0}
 .keyword-editor .editor-input{font-size:16px}
 .candidate-tools{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.draft-keywords .draft-keyword-button{min-height:40px;font-size:13px;line-height:1.5;white-space:normal;overflow-wrap:anywhere}
+.draft-keywords .draft-keyword-button:hover{background:#e3ebdc;border-color:#9eaf8e}
+@media(pointer:coarse){.draft-keywords .draft-keyword-button{min-height:44px}}
 .memo-dialog .memo-keyword-picker,.memo-dialog .memo-keyword-picker .batch-picker{overflow:visible;max-height:none}
 .memo-dialog .memo-keyword-picker h3{margin:12px 0 4px}
 .memo-dialog .memo-keyword-picker>p{margin:8px 0;font-size:13px}
