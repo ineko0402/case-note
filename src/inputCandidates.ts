@@ -1,4 +1,16 @@
+import { keywordize } from './model.ts';
+
 export type InputCandidate = { word: string; registered: boolean; ranges: {start: number; end: number}[] };
+
+export function applyInputCandidates(text: string, source: string, candidates: InputCandidate[], checked: string[]): string {
+  if (text !== source) throw new Error('文章が変わりました。「候補を更新」してから適用してください。');
+  let next = text;
+  const selected = candidates.filter(item => checked.includes(item.word));
+  for (const range of selected.flatMap(item => item.ranges).sort((a, b) => b.start - a.start)) {
+    next = keywordize(next, range.start, range.end, false).text;
+  }
+  return next;
+}
 
 export function inputCandidates(text: string, registered: Set<string>): InputCandidate[] {
   const found = new Map<string, InputCandidate>();

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { inputCandidates } from './inputCandidates.ts';
+import { inputCandidates, applyInputCandidates } from './inputCandidates.ts';
 import { keywordize, keywords } from './model.ts';
 
 test('space-separated candidates distinguish registered and new names',()=>{
@@ -26,4 +26,19 @@ test('backwards replacement preserves brackets and untouched sentence text',()=>
   assert.deepEqual(keywords(next),['太郎','鍵']);
   assert.ok(next.includes('は部屋にいる。'));
   assert.ok(next.includes(')')&&next.includes(']'));
+});
+
+test('editing a missing separator requires refreshed candidates before applying', () => {
+  const original = '太郎 鍵を見た';
+  const edited = '太郎 鍵 を見た';
+  const registered = new Set(['太郎']);
+  assert.throws(() => applyInputCandidates(edited, original, inputCandidates(original, registered), ['太郎', '鍵を見た']), /候補を更新/);
+  const next = applyInputCandidates(edited, edited, inputCandidates(edited, registered), ['太郎', '鍵']);
+  assert.equal(next, '*太郎 *鍵 を見た');
+});
+
+test('candidate apply leaves unselected words and explicit tokens unchanged', () => {
+  const source = '*太郎 鍵 鍵 部屋';
+  const next = applyInputCandidates(source, source, inputCandidates(source, new Set()), ['鍵']);
+  assert.equal(next, '*太郎 *鍵 *鍵 部屋');
 });

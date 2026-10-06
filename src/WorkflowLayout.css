@@ -1,0 +1,45 @@
+/* Constrain content before changing scrolling: flex children must not size to their text. */
+.workspace,.organize-content,.organize-body,.notes-panel,.note-list,.timeline-list{min-width:0;max-width:100%}
+.note-list,.timeline-list{grid-template-columns:minmax(0,1fr)}
+.note-list>article,.timeline-list>article{min-width:0;max-width:100%;overflow-wrap:anywhere}
+.note-sort-main,.timeline-heading-main{max-width:100%;flex-wrap:wrap}
+.note-body .chip{white-space:normal;overflow-wrap:anywhere;max-width:100%}
+.memo-view-controls,.connection-view-controls{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;flex:none;width:100%;max-width:740px;margin:0 auto 12px;padding-inline:12px}
+.memo-view-controls>label{margin-left:auto}
+.connection-view-controls{justify-content:flex-start}
+.keyword-editor .draft-keywords,.keyword-editor .keyword-suggestions,.keyword-editor .keyword-popup{margin:8px 0 0}
+.keyword-editor .editor-input{font-size:16px}
+.candidate-tools{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.memo-dialog .memo-keyword-picker,.memo-dialog .memo-keyword-picker .batch-picker{overflow:visible;max-height:none}
+.memo-dialog .memo-keyword-picker h3{margin:12px 0 4px}
+.memo-dialog .memo-keyword-picker>p{margin:8px 0;font-size:13px}
+.memo-dialog .memo-dialog-body{display:block;overscroll-behavior:contain}
+.memo-dialog .memo-dialog-body .keyword-editor{display:block;min-width:0}
+.memo-dialog .memo-dialog-body .editor-input{height:180px;max-height:400px;resize:vertical;flex:none}
+.memo-dialog .memo-dialog-body .draft-keywords,.memo-dialog .memo-dialog-body .keyword-suggestions,.memo-dialog .memo-dialog-body .keyword-popup{overflow:visible;max-height:none;margin:8px 0 0}
+.memo-dialog-heading,.memo-dialog-actions{background:#f6f8f2}
+@media(min-width:901px){
+  .app>.connection-view-controls{grid-column:1 / -1;grid-row:3}
+  .app.board-view:not(.list-hidden)>.workspace.organizing{display:grid;grid-row:4}
+  .app.board-view:not(.list-hidden)>.workspace.organizing>aside,.app.board-view:not(.list-hidden)>.workspace.organizing>.organize-content{grid-column:auto;grid-row:auto;padding-top:8px}
+}
+@media(max-width:650px){
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  html.mobile-memo-page,html.mobile-memo-page body,html.mobile-memo-page #root{height:auto;overflow:visible}
+  html{scrollbar-gutter:auto}
+  .app:not(.connecting-view){width:100%;height:auto;min-height:100dvh;display:flex;overflow:visible;padding-inline:12px}
+  .app:not(.connecting-view)>.workspace{display:block;flex:none;width:100%;overflow:visible}
+  .app:not(.connecting-view) .organize-content,.app:not(.connecting-view) .organize-body,.app:not(.connecting-view) .notes-panel{display:block;flex:none;width:100%;min-width:0;overflow:visible}
+  .app:not(.connecting-view) aside,.app:not(.connecting-view) .context-header,.app:not(.connecting-view) .fixed-links,.app:not(.connecting-view) .connections-overview{max-height:none;overflow:visible;scrollbar-gutter:auto}
+  .app:not(.connecting-view) aside{width:100%;padding-right:0;margin-bottom:12px}
+  .app:not(.connecting-view) .notes-panel,.app:not(.connecting-view) .connections-overview{padding-inline:0;scrollbar-gutter:auto}
+  .app:not(.connecting-view) .with-board>.notes-panel{width:100%;max-width:100%;margin-top:12px}
+  .app:not(.connecting-view)>.timeline-panel{overflow:visible;scrollbar-gutter:auto;padding-inline:0}
+  .app:not(.connecting-view)>header,.app:not(.connecting-view)>nav,.app:not(.connecting-view)>footer{position:static}
+  .app:not(.connecting-view)>footer{margin-top:16px;padding-bottom:16px}
+  .memo-view-controls,.connection-view-controls{padding-inline:0}
+  .memo-dialog .memo-dialog-body .editor-input{height:clamp(100px,30dvh,220px)!important;min-height:100px;max-height:220px;resize:none;font-size:16px}
+  .memo-dialog .memo-dialog-body .draft-keywords{display:flex}
+  .memo-dialog .memo-dialog-actions{gap:6px;padding-inline:8px}
+  .memo-dialog .memo-dialog-actions button{padding-inline:8px}
+}
