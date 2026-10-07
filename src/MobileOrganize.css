@@ -1,0 +1,35 @@
+.keyword-sidebar-heading{gap:8px;flex-wrap:wrap}
+.keyword-sidebar-heading h2{margin-right:auto}
+.keyword-sidebar-heading>button:not(.icon-button){font-size:12px}
+.context-header .keyword-operation-card>.keyword-actions{display:flex;align-items:center;gap:4px}
+.connection .connection-kind{display:block;font-size:11px;line-height:1.3}
+@media(max-width:650px){
+  .app:not(.connecting-view) .with-board>.notes-panel{position:static;inset:auto;z-index:auto;min-height:0;width:100%;max-width:100%;margin-top:16px;padding:12px 0 0;border:0;border-top:1px solid #dcded8;border-radius:0;background:transparent}
+  .app:not(.connecting-view) .notes-panel[hidden]{display:none}
+  .app:not(.connecting-view) .with-board{position:static}
+  .app:not(.connecting-view) .context-header .fixed-links{display:grid;grid-template-columns:minmax(0,1fr);gap:4px;width:100%;max-height:none;overflow:visible}
+  .context-header .connection{display:grid;grid-template-columns:minmax(0,1fr) 52px 44px;gap:6px;align-items:center;padding:2px 0}
+  .context-header .connection-line{display:none}
+  .context-header .connection .linked-word{width:100%;min-height:44px;padding:5px 8px;text-align:left;font-size:14px;line-height:1.35;background:transparent;border-color:transparent}
+  .context-header .connection>button:not(.linked-word){min-height:44px;height:44px;padding:4px;font-size:13px}
+  .context-header .connection .connection-toggle[aria-pressed=true]{background:#e5ecdf;color:#344c2e;border-color:#829b74}
+  .context-header .keyword-operation-card{display:flex;flex-wrap:nowrap;align-items:center;gap:6px;padding:6px 8px}
+  .context-header .keyword-operation-card .selected-keyword-summary{display:flex;flex:1;flex-wrap:wrap;min-width:0;gap:3px 6px}
+  .selected-keyword-summary>.keyword-kind{flex-basis:100%;font-size:11px;background:transparent;padding:0}
+  .context-header .selected-keyword-summary h2{font-size:15px;line-height:1.4;margin:0;padding:3px 5px}
+  .selected-keyword-summary>span:last-child{font-size:12px}
+  .context-header .keyword-operation-card .keyword-actions{flex:0 0 auto}
+  .context-header .keyword-actions>button{min-height:44px;padding:6px 9px;font-size:13px}
+  .context-header .keyword-actions>button.icon-button{width:44px;padding:0}
+  .context-header .keyword-details>.list-heading{align-items:center}
+  .context-header .keyword-details>.list-heading button{min-height:44px;font-size:14px;padding:6px 10px}
+  .context-header .organize-switch:empty{display:none}
+  .organize-switch button{min-height:44px;padding:6px 10px;font-size:13px}
+  .notes-panel>.list-heading{flex-wrap:wrap;gap:8px;align-items:center}
+  .notes-panel>.list-heading .search-field{flex:1;min-width:140px;width:auto}
+  .note-card-heading{gap:4px;align-items:center}
+  .note-card-heading .note-sort-main{gap:4px;flex-wrap:nowrap}
+  .note-card-heading .memo-card-actions{gap:2px;flex-wrap:nowrap}
+  .note-card-heading .memo-card-actions>button{width:44px;height:44px;min-width:44px;min-height:44px;padding:0}
+  .note-card-heading .app-icon{width:21px;height:21px}
+}
