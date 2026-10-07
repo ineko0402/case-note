@@ -16,17 +16,17 @@ dialog.action-menu{position:fixed;inset:auto;margin:0;padding:12px;border:1px so
 .connection{gap:6px;flex-wrap:wrap;padding:3px 0}
 .connection .linked-word{font-size:14px;min-width:0}
 .connection-kind{font-size:12px;color:#606b59}
-.connection button.connection-toggle{border-style:dashed;background:#f4f6f1;color:#64725e;min-width:44px}
+.connection button.connection-toggle{border-style:dashed;background:#f4f6f1;color:#64725e;min-width:var(--control-height)}
 .connection button.connection-toggle[aria-pressed=true]{border-style:solid;border-color:#4c624d;background:#4c624d;color:white;font-weight:600}
 .connection-line{width:18px}
 @media(min-width:651px) and (pointer:fine){
-  .context-header button{min-height:30px;padding:4px 8px;font-size:13px}
+  .context-header button{min-height:var(--control-height);padding:4px 8px;font-size:13px}
   .organize-switch button{font-size:12px}
   .note-body{font-size:14px;line-height:1.75}
-  .action-menu button,.action-menu select{min-height:32px;padding:5px 8px}
+  .action-menu button,.action-menu select{min-height:var(--control-height);padding:5px 8px}
 }
 @media(max-width:650px),(pointer:coarse){
-  .context-header .connection button,.context-header .list-heading button,.keyword-actions>button,.action-menu button{min-height:44px}
-  .action-menu select{font-size:16px;min-height:44px}
+  .context-header .connection button,.context-header .list-heading button,.keyword-actions>button,.action-menu button{min-height:var(--control-height)}
+  .action-menu select{font-size:16px;min-height:var(--control-height)}
   .connection .linked-word{font-size:14px}
 }

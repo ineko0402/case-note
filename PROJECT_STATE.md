@@ -61,6 +61,7 @@
 - manifestは相対id/start_url/scope、standalone。/case-note/配下で本番だけService Workerを登録し、初回オンラインで準備完了後にオフライン利用可能。
 - キャッシュのリビジョンは配信ファイルの内容から生成。skipWaiting・clients.claim・強制再読み込みは使わず、全タブ・アプリを閉じた後に新版を有効化する。表示復帰時も更新を確認する。
 - キャッシュ削除はCase Note専用の接頭辞だけに限定。保存データはService Workerで変更しない。ホーム画面アプリとブラウザ間のデータ引き継ぎは環境依存としてJSON移行を案内する。
+- 通常コントロールの最小高さは共通CSS変数でPC32px、スマホ／タッチ40px。入力中のキーワード候補は32／36px、本文のキーワード枠は24pxを目安にする。枠の余白と操作アイコンを縮め、本文の文字とスマホの入力16pxは維持する。
 - React + TypeScript + Vite。Google Material SymbolsのSVGを同梱し、外部フォントは読み込まない。
 - 共通部品はKeywordEditor、MemoDialog、SearchField、ActionMenuなど。PCのActionMenuは非モーダル、スマホはモーダルで一覧のスクロール領域外に描画する。
 - モデル・入力候補・接続候補とPWA生成物のテストをCIで実行する。
