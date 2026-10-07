@@ -6,3 +6,8 @@
 .keyword-sidebar-tools{display:flex;justify-content:flex-end;margin:8px 0;gap:8px}
 .keyword-sidebar-tools button{font-size:12px}
 @media(max-width:650px){.install-dialog button,.keyword-sidebar-tools button{min-height:var(--control-height)}}
+
+.install-transfer{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.install-transfer p{flex-basis:100%;margin-top:0;font-size:12px;color:#606b59}
+.install-url{display:block;margin-top:12px}
+.install-url input{display:block;width:100%;margin-top:4px;font-size:16px}
