@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <title>Case Note — つながる手がかり</title>
+  <rect width="512" height="512" fill="#465E49"/>
+  <g transform="translate(256 256) scale(.82) translate(-256 -256)">
+    <g fill="none" stroke="#F5F3EA" stroke-width="18" stroke-linecap="round">
+      <path d="M218 236h25c43 0 25-80 68-80h25"/>
+      <path d="M218 278h25c43 0 25 80 68 80h25"/>
+    </g>
+    <rect x="66" y="174" width="152" height="164" rx="25" fill="#C49A50"/>
+    <g fill="#F5F3EA">
+      <rect x="326" y="96" width="120" height="130" rx="23"/>
+      <rect x="326" y="286" width="120" height="130" rx="23"/>
+    </g>
+    <g fill="#465E49">
+      <rect x="96" y="222" width="92" height="17" rx="8.5"/>
+      <rect x="353" y="139" width="66" height="16" rx="8"/>
+      <rect x="353" y="329" width="66" height="16" rx="8"/>
+    </g>
+  </g>
+</svg>
