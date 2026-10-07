@@ -5,4 +5,4 @@
 .install-dialog button{font-size:14px}
 .keyword-sidebar-tools{display:flex;justify-content:flex-end;margin:8px 0;gap:8px}
 .keyword-sidebar-tools button{font-size:12px}
-@media(max-width:650px){.install-dialog button,.keyword-sidebar-tools button{min-height:44px}}
+@media(max-width:650px){.install-dialog button,.keyword-sidebar-tools button{min-height:var(--control-height)}}

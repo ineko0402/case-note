@@ -9,9 +9,9 @@
 .connection-view-controls{justify-content:flex-start}
 .keyword-editor .draft-keywords,.keyword-editor .keyword-suggestions,.keyword-editor .keyword-popup{margin:8px 0 0}
 .keyword-editor .editor-input{font-size:16px}
-.draft-keywords .draft-keyword-button{min-height:40px;font-size:13px;line-height:1.5;white-space:normal;overflow-wrap:anywhere}
+.draft-keywords .draft-keyword-button{min-height:var(--keyword-control-height);font-size:13px;line-height:1.5;white-space:normal;overflow-wrap:anywhere}
 .draft-keywords .draft-keyword-button:hover{background:#e3ebdc;border-color:#9eaf8e}
-@media(pointer:coarse){.draft-keywords .draft-keyword-button{min-height:44px}}
+@media(pointer:coarse){.draft-keywords .draft-keyword-button{min-height:var(--keyword-control-height)}}
 .memo-dialog .memo-dialog-actions>button:first-child{margin-right:0}
 .memo-dialog .memo-dialog-body{display:block;overscroll-behavior:contain}
 .memo-dialog .memo-dialog-body .keyword-editor{display:block;min-width:0}
