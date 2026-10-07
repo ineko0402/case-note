@@ -15,6 +15,7 @@ import { NumberRegistration } from './NumberRegistration';
 import { Timeline } from './Timeline';
 import { KeywordMerge } from './KeywordMerge';
 import { DataManagement } from './DataManagement';
+import { InstallApp } from './InstallApp';
 import { MemoList } from './MemoList';
 import { AppNavigation, type View } from './AppNavigation';
 import { useMemoEditing } from './useMemoEditing';
@@ -208,7 +209,7 @@ export function App() {
       </div>
       </div>
     </main>}
-    <footer><span className="save-status" role="status">{status}</span><p>メモはこのブラウザに保存されます。端末間の自動同期はありません。</p><div><button onClick={()=>setManagement(true)}>データ管理</button></div><p role="status">{message}</p></footer>
+    <footer><span className="save-status" role="status">{status}</span><p>メモはこのブラウザに保存されます。端末間の自動同期はありません。</p><div><button onClick={()=>setManagement(true)}>データ管理</button><InstallApp/></div><p role="status">{message}</p></footer>
     </>}
   </div></KeywordDragProvider>;
 }
