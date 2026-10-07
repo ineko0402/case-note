@@ -1,7 +1,7 @@
 {
   "name": "case-note",
   "version": "0.1.0",
-  "description": "推理ゲームのメモ・キーワード・関係図を整理するWebアプリ",
+  "description": "推理ゲームのメモ・キーワード・つながりを整理するWebアプリ",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc && vite build && node scripts/build-sw.mjs",
@@ -22,7 +22,6 @@
   },
   "homepage": "https://github.com/ineko0402/case-note#readme",
   "dependencies": {
-    "@xyflow/react": "^12.12.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
