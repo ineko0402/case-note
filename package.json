@@ -6,7 +6,7 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc && vite build && node scripts/build-sw.mjs",
     "test:pwa": "node --test scripts/pwa.test.mjs",
-    "test": "node --experimental-strip-types --test src/model.test.ts src/inputCandidates.test.ts src/connectionCandidates.test.ts",
+    "test": "node --experimental-strip-types --test src/model.test.ts src/inputCandidates.test.ts src/connectionCandidates.test.ts src/useMemoEditing.test.ts",
     "preview": "vite preview --host 0.0.0.0"
   },
   "repository": {

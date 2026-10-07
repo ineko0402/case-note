@@ -16,7 +16,8 @@ import { Timeline } from './Timeline';
 import { KeywordMerge } from './KeywordMerge';
 import { DataManagement } from './DataManagement';
 import { MemoList } from './MemoList';
-import { AppNavigation } from './AppNavigation';
+import { AppNavigation, type View } from './AppNavigation';
+import { useMemoEditing } from './useMemoEditing';
 
 import { QuickMemo } from './QuickMemo';
 
@@ -55,8 +56,9 @@ export function App() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('読み込み中…');
   const [message, setMessage] = useState('');
-  const [editing, setEditing] = useState<string | null>(null);
-  const [editText, setEditText] = useState('');
+  const editor = useMemoEditing(data, setData);
+  const editing = editor.editing;
+  function changeView(next: View) { if (next !== view) editor.close(); setView(next); }
   const [management,setManagement]=useState(false);
   const [replacing,setReplacing]=useState(false);
   const managementDialog=useRef<HTMLDialogElement>(null);
@@ -134,7 +136,7 @@ export function App() {
   const keywordIds = completeOrder(data.keywordOrder, [...counts.keys()]);
   const noteIds = completeOrder(data.noteOrder, data.notes.map(note => note.id));
   const organizedNotes = noteIds.map(id => data.notes.find(note => note.id === id)!);
-  const notes = (view === 'notes' ? memoOrder === 'desc' ? [...data.notes].reverse() : data.notes : organizedNotes).filter(note => (!selected || keywords(note.text).some(word => personWords(data, selected).includes(word))) && note.text.toLocaleLowerCase().includes(search.toLocaleLowerCase())).filter(note => !memoConnecting || (keywords(note.text).includes(linkSource!) && keywords(note.text).some(word => memoConnectionTargets.has(word))));
+  const notes = (view === 'notes' ? memoOrder === 'desc' ? [...data.notes].reverse() : data.notes : organizedNotes).filter(note => note.id === editing || ((!selected || keywords(note.text).some(word => personWords(data, selected).includes(word))) && note.text.toLocaleLowerCase().includes(search.toLocaleLowerCase()) && (!memoConnecting || (keywords(note.text).includes(linkSource!) && keywords(note.text).some(word => memoConnectionTargets.has(word))))));
   const dragOrder = useDragOrder((_group, from, to, after) => setData(previous => ({ ...previous, noteOrder: moveRelative(completeOrder(previous.noteOrder, previous.notes.map(note => note.id)), from, to, after) })));
 
   function add(event: FormEvent) {
@@ -152,7 +154,7 @@ export function App() {
     if(saveTimer.current)clearTimeout(saveTimer.current);
     try {
       await save(next);
-      setData(next);setConnectionMode('board');setQuickMemo(false);setMemoOrder('asc');setView('notes');setSelected(null);setEditing(null);setEditText('');setLinkSource(null);setMemoHighlight(null);setSearch('');setRenameUndo(null);setSettings(false);setBatch(false);setNumbers(false);setRenaming(false);setMerging(false);setShowBoardMemos(false);setShowKeywordList(true);
+      setData(next);setConnectionMode('board');setQuickMemo(false);setMemoOrder('asc');setView('notes');setSelected(null);editor.reset();setLinkSource(null);setMemoHighlight(null);setSearch('');setRenameUndo(null);setSettings(false);setBatch(false);setNumbers(false);setRenaming(false);setMerging(false);setShowBoardMemos(false);setShowKeywordList(true);
       scrollPositions.current={notes:0,keywords:0,board:0,timeline:0,sidebar:0};
       if(notesPanel.current)notesPanel.current.scrollTop=0;
       if(keywordPanel.current)keywordPanel.current.scrollTop=0;
@@ -176,7 +178,7 @@ export function App() {
   }
   return <KeywordDragProvider data={data} update={setData}><div className={'app ' + (view === 'keywords' ? 'keyword-view' : view === 'board' || view === 'timeline' ? 'board-view' : 'memo-view') + (showKeywordList && !memoConnecting && view !== 'timeline' ? '' : ' list-hidden') + (memoConnecting ? ' connecting-view' : '')}>
     <header><div><h1>Case Note</h1><p>手がかりを、そのまま書き留める。</p></div></header>
-    <AppNavigation view={view} connectionMode={connectionMode} count={counts.size} setView={setView} setSelected={setSelected} setLinkSource={setLinkSource}/>
+    <AppNavigation view={view} connectionMode={connectionMode} count={counts.size} setView={changeView} setSelected={setSelected} setLinkSource={setLinkSource}/>
     {ready && quickMemo && <QuickMemo data={data} update={setData} close={()=>setQuickMemo(false)}/>}
     {!ready ? <p>{loadFailed ? 'データを保護するため入力を停止しています。' : 'メモを読み込んでいます。'}</p> : <>
     {linkSource && connectionOptions.mode === 'list' && <ConnectionPickerDialog {...connectionProps}/>}
@@ -187,8 +189,8 @@ export function App() {
     {numbers && <dialog ref={numbersDialog} className="settings-dialog" aria-label="番号をまとめて追加" onCancel={() => setNumbers(false)}><NumberRegistration data={data} update={setData} close={() => setNumbers(false)}/></dialog>}
     {batch && <dialog ref={batchDialog} className="settings-dialog" aria-label="未分類の一括分類" onCancel={() => setBatch(false)}><BatchClassification data={data} words={keywordIds} update={setData} close={() => setBatch(false)}/></dialog>}
     {view === 'notes' && <div className="memo-view-controls" aria-label="メモの操作">{smallScreen && <button className="primary" onClick={()=>setQuickMemo(true)}>新しいメモ</button>}<label>登録順<select aria-label="メモの登録順" value={memoOrder} onChange={event=>{setMemoOrder(event.target.value as 'asc'|'desc');scrollPositions.current.notes=0;if(notesPanel.current)notesPanel.current.scrollTop=0;}}><option value="asc">古い順</option><option value="desc">新しい順</option></select></label></div>}
-    {(view === 'board' || view === 'timeline') && <div className="connection-view-controls" aria-label="つながりの表示方法"><div className="memo-mode-switch"><button aria-pressed={view === 'board'} onClick={()=>{setConnectionMode('board');setView('board');setLinkSource(null);}}>関係</button><button aria-pressed={view === 'timeline'} onClick={()=>{setConnectionMode('timeline');setView('timeline');setLinkSource(null);}}>時系列</button></div></div>}
-    {view === 'timeline' ? <Timeline data={data} update={setData} /> : <main className={view !== 'notes' ? 'workspace organizing' + (showKeywordList && !memoConnecting ? '' : ' sidebar-collapsed') : 'workspace'}>
+    {(view === 'board' || view === 'timeline') && <div className="connection-view-controls" aria-label="つながりの表示方法"><div className="memo-mode-switch"><button aria-pressed={view === 'board'} onClick={()=>{setConnectionMode('board');changeView('board');setLinkSource(null);}}>関係</button><button aria-pressed={view === 'timeline'} onClick={()=>{setConnectionMode('timeline');changeView('timeline');setLinkSource(null);}}>時系列</button></div></div>}
+    {view === 'timeline' ? <Timeline data={data} update={setData} editor={editor}/> : <main className={view !== 'notes' ? 'workspace organizing' + (showKeywordList && !memoConnecting ? '' : ' sidebar-collapsed') : 'workspace'}>
       {view !== 'notes' && showKeywordList && !memoConnecting && <KeywordSidebar hide={() => setShowKeywordList(false)} data={data} counts={counts} selected={selected} setSelected={setSelected} selectKeyword={selectKeyword} setData={setData} settings={settings} setSettings={setSettings} setBatch={setBatch} setNumbers={setNumbers} keywordPanel={keywordPanel} onScroll={top=>{scrollPositions.current.sidebar=top;}}/>}
       <div className="organize-content">
         {memoConnecting ? <ConnectionMemoToolbar {...connectionProps}/> : view !== 'notes' && <KeywordContext clearSelection={() => setSelected(null)} data={data} selected={selected} editing={editing} linkSource={linkSource} setData={setData} selectKeyword={selectKeyword} setRenaming={setRenaming} setMerging={setMerging} beginConnecting={beginConnecting} showKeywordList={showKeywordList} setShowKeywordList={setShowKeywordList} showBoardMemos={showBoardMemos} setShowBoardMemos={setShowBoardMemos} view={view}/>}
@@ -201,7 +203,7 @@ export function App() {
         <div className="list-heading"><h2>{selected ? '関連するメモ' : 'メモ'} <span>{notes.length}</span></h2><SearchField label="メモを検索" placeholder="メモを検索" value={search} onChange={setSearch}/></div>
         {notes.length === 0 && <div className="empty"><p>{data.notes.length ? '該当するメモはありません。' : 'まだメモはありません。'}</p>{!data.notes.length && <p>番号も名前も時間も、まずは別々のキーワードで。<br/>分類や並べ替えは、あとから考えましょう。</p>}</div>}
         <p className="order-hint">{view === 'notes' ? memoOrder==='desc'?'登録順 · 新しい順':'登録順 · 古い順' : '整理順 · ハンドルをドラッグして並べ替え'}</p>
-        <MemoList data={data} notes={notes} counts={counts} view={view} editing={editing} editText={editText} setEditText={setEditText} setEditing={setEditing} setData={setData} dragOrder={dragOrder} noteIds={noteIds} rendered={rendered}/>
+        <MemoList data={data} notes={notes} counts={counts} view={view} editor={editor} setData={setData} dragOrder={dragOrder} noteIds={noteIds} rendered={rendered}/>
       </div>
       </div>
       </div>
