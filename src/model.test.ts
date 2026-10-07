@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { keywords, validateData, emptyData, keywordize, moveBefore } from './model.ts';
+import { keywords, validateData, emptyData, keywordize } from './model.ts';
 test('extracts explicit keywords without interpreting number or time', () => {
   assert.deepEqual(keywords('*1810 *夜 *6 本文 *6\n*食堂　*2'), ['1810', '夜', '6', '食堂', '2']);
 });
@@ -24,15 +24,12 @@ test('converts selection and supplies boundaries without doubling marker', () =>
 test('migrates old backup and preserves customized version 2 settings', () => {
   const old = { version: 1, notes: [], categories: { '6': 'ナンバー' }, draft: '*夜' };
   const migrated = validateData(old);
-  assert.equal(migrated.version, 4);
+  assert.equal(migrated.version, 5);
   assert.equal(migrated.categories['6'], 'ナンバー');
   assert.deepEqual(migrated.keywordOrder, []);
   const custom = { ...emptyData, categoryOrder: ['未分類', '証言'], categories: { '6': '証言' }, keywordOrder: ['6'], collapsed: ['証言'] };
   assert.deepEqual(validateData(custom), custom);
   assert.throws(() => validateData({ ...custom, categoryOrder: ['証言'] }));
-});
-test('moves an item before target and keeps other ordering intact', () => {
-  assert.deepEqual(moveBefore(['a', 'b', 'c'], 'c', 'a'), ['c', 'a', 'b']);
 });
 test('organized note order stays separate from registration and filtered moves preserve hidden notes', async () => {
   const { completeOrder, moveRelative } = await import('./model.ts');
@@ -45,7 +42,7 @@ test('organized note order stays separate from registration and filtered moves p
 });
 test('v2 backups without organized note order load with registration order', () => {
   const { noteOrder, ...previous } = emptyData;
-  assert.deepEqual(validateData(previous).noteOrder, []);
+  assert.deepEqual(validateData({...previous,version:2}).noteOrder, []);
   assert.throws(() => validateData({ ...emptyData, noteOrder: ['a', 'a'] }));
 });
 test('connections are undirected, many-to-many, tentative and do not propagate', async () => {
@@ -58,48 +55,14 @@ test('connections are undirected, many-to-many, tentative and do not propagate',
   assert.deepEqual(connect(data, '1', '1', 'self'), data);
   assert.equal(data.links.some(link => link.a === 'A' && link.b === '鍵'), false);
 });
-test('group memberships remain inside category and follow category rename/deletion', async () => {
-  const { changeKeywordCategory, renameCategory, deleteCategory } = await import('./model.ts');
-  const data = { ...emptyData, categories: { '1': 'ナンバー', '6': 'ナンバー' }, groups: [
-    { id: 'g1', name: '仲良し', category: 'ナンバー', members: ['1', '6'], collapsed: false },
-    { id: 'g2', name: '兄弟', category: 'ナンバー', members: ['1'], collapsed: true }
-  ] };
-  assert.deepEqual(validateData(data), data);
-  const changed = changeKeywordCategory(data, '1', '人物');
-  assert.deepEqual(changed.groups.map(group => group.members), [['6'], []]);
-  assert.equal(renameCategory(data, 'ナンバー', '番号').groups[0].category, '番号');
-  assert.equal(deleteCategory(data, 'ナンバー').groups.length, 0);
-  assert.equal(deleteCategory(data, 'ナンバー').categories['1'], '未分類');
-  assert.throws(() => validateData({ ...data, categories: { '1': '人物' } }));
-});
-test('v3 backups keep connections and groups and reject duplicate relationships', async () => {
+test('v3 backups keep connections and reject duplicate relationships', async () => {
   const { connect } = await import('./model.ts');
   const data = connect(emptyData, '1', 'A', 'l');
-  assert.deepEqual(validateData(JSON.parse(JSON.stringify(data))), data);
+  assert.deepEqual(validateData({...JSON.parse(JSON.stringify(data)),version:3}), data);
   assert.throws(() => validateData({ ...data, links: [...data.links, { id: 'l2', a: 'A', b: '1', status: 'confirmed' }] }));
-  const { links, groups, ...old } = emptyData;
+  const { links, ...old } = emptyData;
   const migrated = validateData({ ...old, version: 2 });
   assert.deepEqual(migrated.links, []);
-  assert.deepEqual(migrated.groups, []);
-});
-test('placing and removing cards leaves notes, connections and groups intact', async () => {
-  const { placeCard, removeCard, connect } = await import('./model.ts');
-  const linked = connect(emptyData, '1', 'A', 'l');
-  const placed = placeCard(placeCard(linked, '1', 50, 80), 'A', 300, -20);
-  assert.equal(placed.board.cards.length, 2);
-  assert.deepEqual(placeCard(placed, '1', 999, 999), placed);
-  const removed = removeCard(placed, '1');
-  assert.equal(removed.board.cards.length, 1);
-  assert.deepEqual(removed.links, linked.links);
-  assert.deepEqual(removed.notes, linked.notes);
-  assert.deepEqual(validateData(JSON.parse(JSON.stringify(placed))), placed);
-});
-test('older backups start with an empty board and invalid positions are rejected', () => {
-  const { board, ...older } = emptyData;
-  const migrated = validateData({ ...older, version: 3 });
-  assert.deepEqual(migrated.board.cards, []);
-  assert.throws(() => validateData({ ...emptyData, board: { ...board, cards: [{ word: '1', x: Infinity, y: 0 }] } }));
-  assert.throws(() => validateData({ ...emptyData, board: { ...board, viewport: { x: 0, y: 0, zoom: 0 } } }));
 });
 test('batch classification changes only selected unclassified keywords', async () => {
   const { classifyUnassigned } = await import('./model.ts');
@@ -110,26 +73,16 @@ test('batch classification changes only selected unclassified keywords', async (
   assert.equal(classified.categories['A'], '人物');
   assert.deepEqual(classifyUnassigned(data, ['1'], 'unknown'), data);
 });
-test('board context includes co-occurring and directly linked keywords without inferred links', async () => {
-  const { contextWords, connect } = await import('./model.ts');
-  const data = connect({ ...emptyData, notes: [{ id: 'n', text: '*1 *食堂 *鍵', createdAt: new Date().toISOString() }] }, '1', 'A', 'l');
-  assert.deepEqual([...contextWords(data, '1')!].sort(), ['1', 'A', '食堂', '鍵'].sort());
-  assert.equal(contextWords(data, null), null);
-  assert.equal(data.links.length, 1);
-});
 
 import { renameKeyword, replaceKeyword } from './model.ts';
-test('renaming updates complete tokens and all references while keeping positions and order', () => {
-  const data = { ...emptyData, notes: [{id:'n',text:'宿泊室A *宿泊室A\n*宿泊室AB *宿泊室A *宿泊室A。',createdAt:'2026-10-03T00:00:00Z'}], draft:'*宿泊室A 本文', categories:{宿泊室A:'場所'},keywordOrder:['宿泊室A','宿泊室AB'],noteOrder:['n'],links:[{id:'l',a:'宿泊室A',b:'1',status:'confirmed' as const}],groups:[{id:'g',name:'北側',category:'場所',members:['宿泊室A'],collapsed:false}],board:{cards:[{word:'宿泊室A',x:20,y:30}],viewport:{x:10,y:20,zoom:1}} };
+test('renaming updates complete tokens and references while keeping order', () => {
+  const data = { ...emptyData, notes: [{id:'n',text:'宿泊室A *宿泊室A\n*宿泊室AB *宿泊室A *宿泊室A。',createdAt:'2026-10-03T00:00:00Z'}], draft:'*宿泊室A 本文', categories:{宿泊室A:'場所'},keywordOrder:['宿泊室A','宿泊室AB'],noteOrder:['n'],links:[{id:'l',a:'宿泊室A',b:'1',status:'confirmed' as const}] };
   const next=renameKeyword(data,'宿泊室A','1F北側宿泊室A');
   assert.equal(next.notes[0].text,'宿泊室A *1F北側宿泊室A\n*宿泊室AB *1F北側宿泊室A *宿泊室A。');
   assert.equal(next.draft,'*1F北側宿泊室A 本文');
   assert.deepEqual(next.categories,{'1F北側宿泊室A':'場所'});
   assert.deepEqual(next.keywordOrder,['1F北側宿泊室A','宿泊室AB']);
   assert.deepEqual(next.links,[{id:'l',a:'1F北側宿泊室A',b:'1',status:'confirmed'}]);
-  assert.deepEqual(next.groups[0].members,['1F北側宿泊室A']);
-  assert.deepEqual(next.board.cards,[{word:'1F北側宿泊室A',x:20,y:30}]);
-  assert.deepEqual(next.board.viewport,data.board.viewport);
   assert.deepEqual(validateData(next),next);
   assert.equal(data.notes[0].text.includes('*1F'),false);
   assert.equal(replaceKeyword('*A *A+B *A','A+B','$&'),'*A *$& *A');
@@ -175,11 +128,6 @@ test('editing a timeline memo preserves reference time, identity and other data'
  assert.deepEqual(keywords(edited.notes[0].text),['1000','人物']);assert.equal(data.notes[0].text,'*0900 本文');assert.equal(updateNoteText(data,'n','  '),data);
 });
 
-import { placeMemoWords } from './model.ts';
-test('memo diagram places unique missing cards and preserves existing cards and relationships',()=>{
- const data={...emptyData,board:{cards:[{word:'A',x:20,y:30}],viewport:{x:0,y:0,zoom:1}},links:[{id:'l',a:'A',b:'B',status:'confirmed' as const}]};
- const next=placeMemoWords(data,['A','B','B','C']);assert.equal(next.board.cards.length,3);assert.deepEqual(next.board.cards[0],data.board.cards[0]);assert.deepEqual(next.links,data.links);assert.deepEqual(placeMemoWords(next,['B','C']).board,next.board);assert.ok(next.board.cards[1].x>20);assert.deepEqual(data.board.cards,[{word:'A',x:20,y:30}]);
-});
 
 import { addTimelineNotes } from './model.ts';
 test('bulk timeline selection adds only selected notes and preserves existing reference times',()=>{
@@ -188,10 +136,20 @@ test('bulk timeline selection adds only selected notes and preserves existing re
 });
 
 import { mergeKeywords } from './model.ts';
-test('merging consolidates tokens, links, memberships, order and cards without changing timeline',()=>{
- const data={...emptyData,notes:[{id:'n',text:'A *A *AB *B',createdAt:'2026-10-03T00:00:00Z'}],draft:'*A',categories:{A:'人物',B:'ナンバー'},keywordOrder:['A','C','B'],registeredWords:['A','B'],timeline:{n:'09:00'},links:[{id:'self',a:'A',b:'B',status:'tentative' as const},{id:'one',a:'A',b:'C',status:'tentative' as const},{id:'two',a:'C',b:'B',status:'confirmed' as const}],groups:[{id:'g',name:'人物',category:'人物',members:['A'],collapsed:false},{id:'h',name:'番号',category:'ナンバー',members:['B'],collapsed:false}],board:{cards:[{word:'A',x:1,y:2},{word:'B',x:30,y:40}],viewport:{x:0,y:0,zoom:1}}};
- const next=mergeKeywords(data,'A','B','人物');assert.equal(next.notes[0].text,'A *B *AB *B');assert.equal(next.draft,'*B');assert.deepEqual(next.categories,{B:'人物'});assert.deepEqual(next.keywordOrder,['C','B']);assert.deepEqual(next.registeredWords,['B']);assert.deepEqual(next.links,[{id:'one',a:'B',b:'C',status:'confirmed'}]);assert.deepEqual(next.groups.map(g=>g.members),[['B'],[]]);assert.deepEqual(next.board.cards,[{word:'B',x:30,y:40}]);assert.deepEqual(next.timeline,data.timeline);assert.deepEqual(validateData(next),next);assert.equal(data.links[0].id,'self');assert.throws(()=>mergeKeywords(data,'A','A','人物'));assert.throws(()=>mergeKeywords(data,'A','missing','人物'));
- const onlySource={...data,board:{...data.board,cards:[{word:'A',x:1,y:2}]}};assert.deepEqual(mergeKeywords(onlySource,'A','B','人物').board.cards,[{word:'B',x:1,y:2}]);
+test('merging consolidates tokens, links and order without changing timeline',()=>{
+ const data={...emptyData,notes:[{id:'n',text:'A *A *AB *B',createdAt:'2026-10-03T00:00:00Z'}],draft:'*A',categories:{A:'人物',B:'ナンバー'},keywordOrder:['A','C','B'],registeredWords:['A','B'],timeline:{n:'09:00'},links:[{id:'self',a:'A',b:'B',status:'tentative' as const},{id:'one',a:'A',b:'C',status:'tentative' as const},{id:'two',a:'C',b:'B',status:'confirmed' as const}]};
+ const next=mergeKeywords(data,'A','B','人物');
+ assert.equal(next.notes[0].text,'A *B *AB *B');
+ assert.equal(next.draft,'*B');
+ assert.deepEqual(next.categories,{B:'人物'});
+ assert.deepEqual(next.keywordOrder,['C','B']);
+ assert.deepEqual(next.registeredWords,['B']);
+ assert.deepEqual(next.links,[{id:'one',a:'B',b:'C',status:'confirmed'}]);
+ assert.deepEqual(next.timeline,data.timeline);
+ assert.deepEqual(validateData(next),next);
+ assert.equal(data.links[0].id,'self');
+ assert.throws(()=>mergeKeywords(data,'A','A','人物'));
+ assert.throws(()=>mergeKeywords(data,'A','missing','人物'));
 });
 
 import { mergeCandidates } from './model.ts';
@@ -208,7 +166,7 @@ import { freshData } from './model.ts';
 test('clearing produces independent default data without modifying current data or defaults',()=>{
  const current={...emptyData,notes:[{id:'n',text:'*A',createdAt:'2026-10-03T00:00:00Z'}],registeredWords:['A'],timeline:{n:'09:00'}};
  const cleared=freshData();assert.deepEqual(validateData(cleared),emptyData);assert.equal(keywordCounts(cleared).size,0);assert.equal(cleared.timeline,undefined);assert.equal(cleared.registeredWords,undefined);
- cleared.categoryOrder.push('変更');cleared.board.cards.push({word:'X',x:0,y:0});assert.deepEqual(freshData(),emptyData);assert.equal(current.notes.length,1);assert.deepEqual(current.timeline,{n:'09:00'});
+ cleared.categoryOrder.push('変更');assert.deepEqual(freshData(),emptyData);assert.equal(current.notes.length,1);assert.deepEqual(current.timeline,{n:'09:00'});
 });
 
 import { canIdentify, changeLink, identityConflicts, changeKeywordCategory } from './model.ts';
@@ -231,12 +189,36 @@ test('identity follows rename and category edits, while keyword merges reject am
  const unconfirmed=changeLink(data,'b','identity','tentative');const merged=mergeKeywords(unconfirmed,'1','2','ナンバー');assert.deepEqual(validateData(merged),merged);assert.equal(merged.links.filter(link=>link.kind==='identity'&&link.status==='confirmed').length,1);
 });
 
-import { personWords, personBoardCards, movePersonCard, contextWords } from './model.ts';
-test('person card combines confirmed identities, deduplicates notes and items and splits without data loss',()=>{
- const data={...emptyData,notes:[{id:'a',text:'*1 *太郎 *鍵',createdAt:'2026-10-03T00:00:00Z'},{id:'b',text:'*太郎',createdAt:'2026-10-03T00:00:00Z'}],categories:{'1':'ナンバー',太郎:'人物',鍵:'アイテム'},links:[{id:'id',a:'1',b:'太郎',kind:'identity' as const,status:'confirmed' as const},{id:'item1',a:'1',b:'鍵',status:'tentative' as const},{id:'item2',a:'太郎',b:'鍵',status:'confirmed' as const}],board:{cards:[{word:'1',x:10,y:20},{word:'太郎',x:80,y:90},{word:'鍵',x:200,y:300}],viewport:{x:0,y:0,zoom:1}}};
- assert.deepEqual(personWords(data,'太郎'),['1','太郎']);const cards=personBoardCards(data,null);assert.equal(cards.length,2);assert.deepEqual(cards[0].members,['1','太郎']);assert.equal(cards[0].noteCount,2);assert.deepEqual(cards[0].items,[{word:'鍵',status:'confirmed'}]);assert.equal(personBoardCards(data,new Set(['太郎'])).length,1);
- const moved=movePersonCard(data,'1',40,50);assert.deepEqual(moved.board.cards.slice(0,2),[{word:'1',x:40,y:50},{word:'太郎',x:110,y:120}]);assert.deepEqual(moved.links,data.links);assert.deepEqual(moved.notes,data.notes);
- const split=changeLink(moved,'id','identity','tentative');assert.equal(personBoardCards(split,null).length,3);assert.deepEqual(split.board.cards,moved.board.cards);assert.deepEqual(validateData(split),split);
- const onePlaced={...data,board:{...data.board,cards:[{word:'太郎',x:80,y:90}]}};assert.equal(personBoardCards(onePlaced,null)[0].word,'太郎');assert.equal(personBoardCards(onePlaced,null)[0].members.length,2);
- assert.ok(contextWords(data,'1')?.has('鍵'));assert.equal(data.board.cards[0].x,10);
+
+test('legacy groups and positions are discarded while live data migrates to v5', () => {
+  const expected = {...emptyData, notes:[{id:'n', text:'*1 *山田 *0900', createdAt:'2026-10-07T00:00:00Z'}],
+    categories:{'1':'ナンバー',山田:'人物','0900':'時間'}, registeredWords:['1'], keywordOrder:['1','山田'],
+    noteOrder:['n'], collapsed:['人物'], draft:'下書き', timeline:{n:'09:00'},
+    links:[{id:'l',a:'1',b:'山田',kind:'identity' as const,status:'confirmed' as const}]};
+  for (const version of [3,4,5]) {
+    const source = {...expected, version, groups:[{id:'g',name:'仲良し'}], board:{cards:[{word:'1',x:100,y:200}]}};
+    const migrated=validateData(source);
+    assert.deepEqual(migrated,expected);
+    assert.equal(Object.hasOwn(migrated,'groups'),false);
+    assert.equal(Object.hasOwn(migrated,'board'),false);
+    assert.equal(source.version,version);
+  }
+  assert.deepEqual(validateData({...emptyData,version:4}),emptyData);
+  assert.deepEqual(validateData({...emptyData,version:4,groups:'unused',board:null}),emptyData);
+  assert.throws(()=>validateData({...emptyData,version:6}));
+});
+
+test('category edits preserve current data without legacy group bookkeeping', async () => {
+  const {renameCategory,deleteCategory}=await import('./model.ts');
+  const data={...emptyData,categories:{'1':'ナンバー'}};
+  assert.equal(changeKeywordCategory(data,'1','人物').categories['1'],'人物');
+  assert.equal(renameCategory(data,'ナンバー','番号').categories['1'],'番号');
+  assert.equal(deleteCategory(data,'ナンバー').categories['1'],'未分類');
+});
+
+test('confirmed identity members remain available without board positions', async () => {
+  const {personWords}=await import('./model.ts');
+  const data={...emptyData,categories:{'1':'ナンバー',山田:'人物'},links:[{id:'l',a:'山田',b:'1',kind:'identity' as const,status:'confirmed' as const}]};
+  assert.deepEqual(personWords(data,'山田'),['1','山田']);
+  assert.deepEqual(personWords(changeLink(data,'l','identity','tentative'),'山田'),['山田']);
 });

@@ -22,8 +22,6 @@ dialog.action-menu{position:fixed;inset:auto;margin:0;padding:12px;border:1px so
 @media(min-width:651px) and (pointer:fine){
   .context-header button{min-height:30px;padding:4px 8px;font-size:13px}
   .organize-switch button{font-size:12px}
-  .note-sort button,.note-sort button.icon-button,.note-sort .drag-handle{width:30px;height:30px;min-width:30px;min-height:30px;padding:0}
-  .note-sort .app-icon{width:19px;height:19px}
   .note-body{font-size:14px;line-height:1.75}
   .action-menu button,.action-menu select{min-height:32px;padding:5px 8px}
 }

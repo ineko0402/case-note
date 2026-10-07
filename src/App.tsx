@@ -1,6 +1,6 @@
 import { SearchField } from './SearchField';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { emptyData, personWords, keywordCounts, keywords, connect, moveRelative, completeOrder, validateData, type Data } from './model';
+import { emptyData, personWords, keywordCounts, keywords, connect, moveRelative, completeOrder, type Data } from './model';
 import { load, save } from './storage';
 import { KeywordEditor } from './KeywordEditor';
 import { CategorySettings } from './CategorySettings';
