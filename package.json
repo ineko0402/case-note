@@ -4,7 +4,8 @@
   "description": "推理ゲームのメモ・キーワード・関係図を整理するWebアプリ",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && node scripts/build-sw.mjs",
+    "test:pwa": "node --test scripts/pwa.test.mjs",
     "test": "node --experimental-strip-types --test src/model.test.ts src/inputCandidates.test.ts src/connectionCandidates.test.ts",
     "preview": "vite preview --host 0.0.0.0"
   },
