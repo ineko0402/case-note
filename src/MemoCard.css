@@ -6,6 +6,6 @@
 .memo-card-actions{margin-left:auto;justify-content:flex-end}
 .memo-card-actions>.icon-button{border:0;background:transparent}
 .memo-card-actions>.icon-button:hover{background:#eeefea;color:#30352f}
-.note-card-heading .drag-handle{min-width:40px;min-height:40px}
+.note-card-heading .drag-handle{min-width:var(--control-height);min-height:var(--control-height)}
 .connecting-memos .note-card-heading{display:none}
-@media(pointer:coarse){.note-card-heading .drag-handle{min-width:44px;min-height:44px}}
+@media(pointer:coarse){.note-card-heading .drag-handle{min-width:var(--control-height);min-height:var(--control-height)}}
