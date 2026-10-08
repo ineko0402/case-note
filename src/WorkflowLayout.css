@@ -38,8 +38,12 @@
   .app:not(.connecting-view)>header,.app:not(.connecting-view)>nav,.app:not(.connecting-view)>footer{position:static}
   .app:not(.connecting-view)>footer{margin-top:16px;padding-bottom:16px}
   .memo-view-controls,.connection-view-controls{padding-inline:0}
-  .memo-dialog .memo-dialog-body .editor-input{height:clamp(100px,30dvh,220px)!important;min-height:100px;max-height:220px;resize:none;font-size:16px}
+  .memo-dialog .memo-dialog-body .editor-input{height:var(--editor-auto-height,52px)!important;min-height:52px;max-height:180px;resize:none;font-size:16px;scrollbar-gutter:auto}
   .memo-dialog .memo-dialog-body .draft-keywords{display:flex}
   .memo-dialog .memo-dialog-actions{gap:6px;padding-inline:8px}
   .memo-dialog .memo-dialog-actions button{padding-inline:8px}
+  .batch-selection .batch-tools{align-items:center;gap:8px}
+  .batch-selection .batch-tools>label{display:flex;align-items:center;gap:6px;min-width:0;flex:1}
+  .batch-selection .batch-tools select{min-width:0;min-height:40px;font-size:16px;padding:6px 8px}
+  .batch-selection .batch-tools>button{flex:none}
 }

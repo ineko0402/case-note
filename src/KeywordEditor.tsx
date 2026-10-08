@@ -1,11 +1,43 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { keywordize, keywords, selectionWords } from './model';
 import { keywordSuggestions } from './inputHelp';
 import { inputCandidates, applyInputCandidates, type InputCandidate } from './inputCandidates';
+import { mobileEditorHeight } from './editorHeight';
 type Props = { value: string; onChange: (value: string) => void; registered: Set<string>; id?: string; label?: string; placeholder?: string; autoFocus?: boolean; onSubmitShortcut?: () => void; fitViewport?: boolean };
 export function KeywordEditor({ value, onChange, registered, id, label, placeholder, autoFocus, onSubmitShortcut, fitViewport = false }: Props) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const heightKey = 'case-note-editor-height';
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element || !fitViewport) return;
+    const viewport = window.visualViewport;
+    const body = element.closest<HTMLElement>('.memo-dialog-body');
+    let width = element.clientWidth;
+    function resize() {
+      const scrollTop = element!.scrollTop;
+      element!.style.setProperty('--editor-auto-height', '0px');
+      const border = element!.offsetHeight - element!.clientHeight;
+      const height = mobileEditorHeight(element!.scrollHeight + border,
+        viewport?.height ?? window.innerHeight, body?.clientHeight ?? window.innerHeight);
+      element!.style.setProperty('--editor-auto-height', height + 'px');
+      element!.scrollTop = scrollTop;
+    }
+    resize();
+    const observer = new ResizeObserver(() => {
+      if (element.clientWidth === width) return;
+      width = element.clientWidth;
+      resize();
+    });
+    observer.observe(element);
+    viewport?.addEventListener('resize', resize);
+    window.addEventListener('resize', resize);
+    return () => {
+      observer.disconnect();
+      viewport?.removeEventListener('resize', resize);
+      window.removeEventListener('resize', resize);
+      element.style.removeProperty('--editor-auto-height');
+    };
+  }, [value, fitViewport]);
   useEffect(() => {
     const element = ref.current;
     if (!element) return;
