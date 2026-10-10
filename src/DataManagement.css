@@ -1,0 +1,6 @@
+.game-title-field{display:grid;gap:6px;font-size:13px;margin-bottom:6px}
+.game-title-field input{width:100%;min-width:0;font-size:16px}
+.game-title-help{font-size:12px;color:#606b59;margin-bottom:16px}
+.backup-game-title{font-size:14px;font-weight:600;overflow-wrap:anywhere}
+dialog.data-management-dialog{scrollbar-gutter:auto}
+.data-management-dialog .data-management{border:0;border-radius:0}

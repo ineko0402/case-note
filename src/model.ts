@@ -1,7 +1,7 @@
 export const categories = ['未分類', 'ナンバー', '人物', '場所', 'アイテム', '時間', 'その他'];
 export type Note = { id: string; text: string; createdAt: string };
 export type Link = { kind?: 'related' | 'identity'; id: string; a: string; b: string; status: 'tentative' | 'confirmed' };
-export type Data = { timeline?: Record<string, string | null>; registeredWords?: string[]; version: 5; notes: Note[]; categories: Record<string, string>; draft: string; categoryOrder: string[]; keywordOrder: string[]; collapsed: string[]; noteOrder: string[]; links: Link[] };
+export type Data = { gameTitle?: string; timeline?: Record<string, string | null>; registeredWords?: string[]; version: 5; notes: Note[]; categories: Record<string, string>; draft: string; categoryOrder: string[]; keywordOrder: string[]; collapsed: string[]; noteOrder: string[]; links: Link[] };
 export const emptyData: Data = { version: 5, notes: [], categories: {}, draft: '', categoryOrder: [...categories], keywordOrder: [], collapsed: [], noteOrder: [], links: [] };
 export function keywords(text: string): string[] {
   return [...new Set([...text.matchAll(/(?:^|\s)\*([^\s*]+)/gu)].map(match => match[1]))];
@@ -23,6 +23,7 @@ export function keywordize(text: string, start: number, end: number, merge: bool
 export function validateData(value: unknown): Data {
   if (!value || typeof value !== 'object') throw new Error('バックアップの形式が違います。');
   const data = value as Data;
+  if (data.gameTitle !== undefined && typeof data.gameTitle !== 'string') throw new Error('ゲームタイトルの形式が違います。');
   if (![1, 2, 3, 4, 5].includes(data.version) || !Array.isArray(data.notes) || typeof data.draft !== 'string' || !data.categories || typeof data.categories !== 'object' || Array.isArray(data.categories)) throw new Error('バックアップの形式が違います。');
   const ids = new Set<string>();
   for (const note of data.notes) {
@@ -49,7 +50,18 @@ export function validateData(value: unknown): Data {
     if (pairs.has(pair)) throw new Error('結びが重複しています。');
     pairs.add(pair); linkIds.add(link.id);
   }
-  return { ...(data.timeline !== undefined ? { timeline: data.timeline } : {}), ...(data.registeredWords !== undefined ? { registeredWords: data.registeredWords } : {}), version: 5, notes: data.notes, categories: Object.fromEntries(Object.entries(data.categories)), draft: data.draft, categoryOrder: order, keywordOrder: legacy ? [] : data.keywordOrder, collapsed: legacy ? [] : data.collapsed, noteOrder: data.noteOrder ?? [], links };
+  return { ...(data.gameTitle !== undefined ? { gameTitle: data.gameTitle } : {}), ...(data.timeline !== undefined ? { timeline: data.timeline } : {}), ...(data.registeredWords !== undefined ? { registeredWords: data.registeredWords } : {}), version: 5, notes: data.notes, categories: Object.fromEntries(Object.entries(data.categories)), draft: data.draft, categoryOrder: order, keywordOrder: legacy ? [] : data.keywordOrder, collapsed: legacy ? [] : data.collapsed, noteOrder: data.noteOrder ?? [], links };
+}
+
+export function backupFilename(data: Data, date = new Date()): string {
+  const title = (data.gameTitle ?? '').trim().replace(/[<>:"/\\|?*\u0000-\u001f\u007f]/gu, '_').replace(/[. ]+$/u, '');
+  const day = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  return title ? `case-note_${Array.from(title).slice(0, 80).join('')}_${day}.json` : `case-note-${day}.json`;
+}
+
+export function linkedWords(data: Data, word: string) {
+  return data.links.filter(link => link.a === word || link.b === word)
+    .map(link => ({ word: link.a === word ? link.b : link.a, status: link.status, kind: link.kind ?? 'related' as const }));
 }
 
 export function moveRelative<T>(items: T[], from: T, to: T, after: boolean): T[] {

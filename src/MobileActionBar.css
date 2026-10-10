@@ -9,7 +9,7 @@
 .mobile-action-bar-tools .timeline-clock{gap:6px}
 .mobile-action-bar-tools .app-icon{width:18px;height:18px}
 @media(max-width:650px){
-  .app:not(.connecting-view){padding-bottom:calc(100px + env(safe-area-inset-bottom))}
+  .app:not(.connecting-view){padding-bottom:max(calc(100px + env(safe-area-inset-bottom)),calc(var(--mobile-action-height,100px) + 12px))}
   .mobile-memo-card.is-action-target{outline:1px solid #6d875c;background:#f2f5ed}
   .mobile-memo-card .note-footer button.memo-select-trigger{font:inherit;min-height:24px;padding:0;background:transparent;color:inherit;border:0;text-align:left}
   .mobile-memo-card .note-card-heading{margin-bottom:2px}
