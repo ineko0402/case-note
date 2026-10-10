@@ -1,6 +1,34 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { keywords, validateData, emptyData, keywordize } from './model.ts';
+import { keywords, validateData, emptyData, keywordize, backupFilename, linkedWords } from './model.ts';
+test('game titles survive backup restoration without affecting older title-free backups', () => {
+  const titled = {...emptyData,gameTitle:'消えた銀の鍵 / 第１章'};
+  assert.deepEqual(validateData(JSON.parse(JSON.stringify(titled))),titled);
+  assert.deepEqual(validateData(emptyData),emptyData);
+  assert.throws(()=>validateData({...emptyData,gameTitle:123}));
+  assert.equal(validateData({...emptyData,gameTitle:''}).gameTitle,'');
+});
+test('backup filenames retain Japanese titles, sanitize path characters, and use the local day', () => {
+  const date = new Date(2026,9,10,0,5);
+  assert.equal(backupFilename(emptyData,date),'case-note-2026-10-10.json');
+  assert.equal(backupFilename({...emptyData,gameTitle:'  消えた銀の鍵  '},date),'case-note_消えた銀の鍵_2026-10-10.json');
+  assert.equal(backupFilename({...emptyData,gameTitle:'A/B\\C: "鍵"?*<>|\n'},date),'case-note_A_B_C_ _鍵_______2026-10-10.json');
+  assert.equal(backupFilename({...emptyData,gameTitle:'   '},date),'case-note-2026-10-10.json');
+  assert.equal(backupFilename({...emptyData,gameTitle:'あ'.repeat(500)},date).length,106);
+});
+test('linked word previews are direct, undirected, and retain tentative and identity status', () => {
+  const data = {...emptyData,links:[
+    {id:'1',a:'山田',b:'1',status:'confirmed' as const,kind:'identity' as const},
+    {id:'2',a:'鍵',b:'山田',status:'tentative' as const},
+    {id:'3',a:'鍵',b:'食堂',status:'confirmed' as const},
+  ]};
+  assert.deepEqual(linkedWords(data,'山田'),[
+    {word:'1',status:'confirmed',kind:'identity'},
+    {word:'鍵',status:'tentative',kind:'related'},
+  ]);
+  assert.deepEqual(linkedWords(data,'なし'),[]);
+  assert.equal(linkedWords(data,'鍵').length,2);
+});
 test('extracts explicit keywords without interpreting number or time', () => {
   assert.deepEqual(keywords('*1810 *夜 *6 本文 *6\n*食堂　*2'), ['1810', '夜', '6', '食堂', '2']);
 });
@@ -164,8 +192,8 @@ test('merge candidates prioritize names containing the source and retain search 
 
 import { freshData } from './model.ts';
 test('clearing produces independent default data without modifying current data or defaults',()=>{
- const current={...emptyData,notes:[{id:'n',text:'*A',createdAt:'2026-10-03T00:00:00Z'}],registeredWords:['A'],timeline:{n:'09:00'}};
- const cleared=freshData();assert.deepEqual(validateData(cleared),emptyData);assert.equal(keywordCounts(cleared).size,0);assert.equal(cleared.timeline,undefined);assert.equal(cleared.registeredWords,undefined);
+ const current={...emptyData,gameTitle:'銀の鍵',notes:[{id:'n',text:'*A',createdAt:'2026-10-03T00:00:00Z'}],registeredWords:['A'],timeline:{n:'09:00'}};
+ const cleared=freshData();assert.deepEqual(validateData(cleared),emptyData);assert.equal(keywordCounts(cleared).size,0);assert.equal(cleared.timeline,undefined);assert.equal(cleared.registeredWords,undefined);assert.equal(cleared.gameTitle,undefined);assert.equal(current.gameTitle,'銀の鍵');
  cleared.categoryOrder.push('変更');assert.deepEqual(freshData(),emptyData);assert.equal(current.notes.length,1);assert.deepEqual(current.timeline,{n:'09:00'});
 });
 
