@@ -5,17 +5,18 @@ import './Icon.css';
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { TimelineBulk } from './TimelineBulk';
 import { KeywordText } from './KeywordText';
+import type { KeywordInspection } from './KeywordHover';
 import { MemoEditForm } from './MemoEditForm';
 import type { MemoEditing } from './useMemoEditing';
 import { keywords, personWords, keywordCounts, timelineNotes, type Data } from './model';
 import { TimelineSetting } from './TimelineSetting';
 import { useSmallScreen } from './useSmallScreen';
-export function Timeline({data,update,editor, filterKeyword: selected, setFilterKeyword: setSelected, actionNote, selectMemo, onKeyword, onResetFilter, closeActions}: {data: Data; update: (data: Data) => void; editor: MemoEditing; filterKeyword: string | null; setFilterKeyword: Dispatch<SetStateAction<string | null>>; actionNote: string | null; selectMemo: (id: string) => void; onKeyword: (word: string) => void; onResetFilter: () => void; closeActions: () => void}) {
+export function Timeline({data,update,editor, filterKeyword: selected, setFilterKeyword: setSelected, actionNote, selectMemo, onKeyword, onResetFilter, closeActions, inspection}: {data: Data; update: (data: Data) => void; editor: MemoEditing; filterKeyword: string | null; setFilterKeyword: Dispatch<SetStateAction<string | null>>; actionNote: string | null; selectMemo: (id: string) => void; onKeyword: (word: string) => void; onResetFilter: () => void; closeActions: () => void; inspection?:KeywordInspection}) {
  const smallScreen=useSmallScreen();
  const [search,setSearch]=useState('');
  const members=selected ? personWords(data,selected) : [];
  const related=new Set(members);
- function render(text: string) { return <KeywordText text={text} active={selected} related={related} onSelect={word=>{setSelected(previous=>smallScreen?word:previous===word?null:word);if(smallScreen)onKeyword(word);}}/>; }
+ function render(text: string) { return <KeywordText text={text} inspection={inspection} active={inspection?.active ?? selected} related={related} onSelect={word=>{setSelected(previous=>smallScreen?word:previous===word?null:word);if(smallScreen)onKeyword(word);}}/>; }
  const [bulk,setBulk]=useState(false);
  const bulkDialog=useRef<HTMLDialogElement>(null);
  useEffect(() => {

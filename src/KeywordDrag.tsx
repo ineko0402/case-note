@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type DragEvent, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ButtonHTMLAttributes, type MouseEvent, type DragEvent, type ReactNode } from 'react';
 import { connect, keywordCounts, type Data } from './model';
 
 const mime = 'application/x-case-note-keyword';
@@ -30,7 +30,7 @@ export function useKeywordDrag(word:string){
     onDrop:(event:DragEvent)=>{if(accepts(event)){event.preventDefault();event.stopPropagation();context.drop(word);}}
   };
 }
-export function DraggableKeyword({word,children,onClick,className,pressed}:{word:string;children:ReactNode;onClick:()=>void;className?:string;pressed?:boolean}){
+export function DraggableKeyword({word,children,onClick,className,pressed,buttonProps}:{word:string;children:ReactNode;onClick:(event:MouseEvent<HTMLButtonElement>)=>void;className?:string;pressed?:boolean;buttonProps?:ButtonHTMLAttributes<HTMLButtonElement>}){
   const drag=useKeywordDrag(word);
-  return <button {...drag} className={className} aria-pressed={pressed} onClick={onClick}>{children}</button>;
+  return <button {...buttonProps} {...drag} onDragStart={event=>{buttonProps?.onDragStart?.(event);drag.onDragStart?.(event);}} className={className} aria-pressed={pressed} onClick={onClick}>{children}</button>;
 }
