@@ -1,13 +1,16 @@
 import { useEffect, useRef } from 'react';
+import { MemoTitle } from './MemoTitle';
+import type { KeywordClassification } from './model';
 import { KeywordEditor } from './KeywordEditor';
 import { useSmallScreen } from './useSmallScreen';
 
 type Props = {
-  title: string; value: string; onChange: (value: string) => void;
+  title: string; value: string; onChange: (value: string, classification?: KeywordClassification) => void;
+  memoTitle:string;onTitleChange:(title:string)=>void; error?:string;
   registered: Set<string>; submitLabel: string; submit: () => void; close: () => void;
 };
 
-export function MemoDialog({title,value,onChange,registered,submitLabel,submit,close}: Props) {
+export function MemoDialog({title,value,onChange,memoTitle,onTitleChange,error,registered,submitLabel,submit,close}: Props) {
   const dialog = useRef<HTMLDialogElement>(null);
   const outsidePress = useRef(false);
   const small = useSmallScreen();
@@ -43,7 +46,9 @@ export function MemoDialog({title,value,onChange,registered,submitLabel,submit,c
     <form onSubmit={event=>{event.preventDefault();if(value.trim())submit();}}>
       <div className="memo-dialog-heading"><h2>{title}</h2></div>
       <div className="memo-dialog-body">
+        <MemoTitle value={memoTitle} onChange={onTitleChange}/>
         <KeywordEditor label={title+'の本文'} value={value} onChange={onChange} registered={registered} fitViewport={small} onSubmitShortcut={submit}/>
+        {error && <p role="alert">{error}</p>}
       </div>
       <div className="memo-dialog-actions"><button type="button" onClick={close}>閉じる</button><button type="submit" className="primary" disabled={!value.trim()}>{submitLabel}</button></div>
     </form>

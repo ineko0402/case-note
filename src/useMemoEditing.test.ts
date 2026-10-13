@@ -21,15 +21,17 @@ test('empty drafts are retained and a second memo cannot replace an active edit'
 });
 
 test('saving clears only the current draft so future edits start from the saved text', () => {
-  const state = { editing: 'n', text: '保存内容', drafts: { n: '古い下書き', other: '別の未保存文' } };
+  const draft = {text:'古い下書き',title:'',classifications:[]};
+  const other = {text:'別の未保存文',title:'',classifications:[]};
+  const state = { ...initialMemoEdit, editing: 'n', text: '保存内容', drafts: { n: draft, other } };
   const saved = memoEditReducer(state, { type: 'saved' });
-  assert.deepEqual(saved.drafts, { other: '別の未保存文' });
+  assert.deepEqual(saved.drafts, { other });
   assert.equal(memoEditReducer(saved, { type: 'begin', note: { ...note, text: '保存内容' } }).text, '保存内容');
-  assert.equal(state.drafts.n, '古い下書き');
+  assert.equal(state.drafts.n.text, '古い下書き');
 });
 
 test('replacing data resets active edits and all temporary drafts', () => {
-  const state = { editing: 'n', text: '修正', drafts: { n: '未保存' } };
+  const state = { ...initialMemoEdit, editing: 'n', text: '修正', drafts: { n: {text:'未保存',title:'',classifications:[]} } };
   assert.deepEqual(memoEditReducer(state, { type: 'reset' }), initialMemoEdit);
   assert.equal(memoEditReducer(initialMemoEdit, { type: 'change', text: '入力なし' }), initialMemoEdit);
 });
