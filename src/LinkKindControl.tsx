@@ -5,5 +5,10 @@ export function updateLink(data: Data, link: Link, kind: 'related'|'identity', s
  update(changeLink(data,link.id,kind,status,conflicts.length>0));
 }
 export function LinkKindControl({data,link,update}: {data: Data; link: Link; update: (next: Data) => void}) {
- return <label className="link-kind">つながりの種類<select aria-label={`*${link.a}と*${link.b}のつながりの種類`} value={link.kind??'related'} onChange={event=>updateLink(data,link,event.target.value as 'related'|'identity',link.status,update)}><option value="related">関係あり</option><option value="identity" disabled={!canIdentify(data,link)}>同一人物</option></select></label>;
+ const identity = link.kind === 'identity';
+ const disabled = !identity && !canIdentify(data,link);
+ return <button type="button" className="link-kind-toggle" aria-pressed={identity} disabled={disabled}
+   aria-label={`*${link.a}と*${link.b}を同一人物として扱う`}
+   title={disabled ? '同一人物はナンバーと人物の間で指定できます' : identity ? 'クリックで関係ありに戻す' : 'クリックで同一人物にする'}
+   onClick={()=>updateLink(data,link,identity?'related':'identity',link.status,update)}>{identity?'同一人物':'関係あり'}</button>;
 }
