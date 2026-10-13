@@ -38,7 +38,14 @@ export function App() {
   const [loadFailed, setLoadFailed] = useState(false);
   const [view, setView] = useState<'notes' | 'keywords' | 'board' | 'timeline'>('notes');
 
-  const [memoOrder,setMemoOrder]=useState<'asc'|'desc'>('asc');
+  const [memoOrder,setMemoOrder]=useState<'asc'|'desc'>(()=>{
+    try { return localStorage.getItem('case-note-memo-order') === 'desc' ? 'desc' : 'asc'; }
+    catch { return 'asc'; }
+  });
+  useEffect(()=>{
+    try { localStorage.setItem('case-note-memo-order',memoOrder); }
+    catch { /* The current session still supports changing the order. */ }
+  },[memoOrder]);
   const [connectionMode,setConnectionMode]=useState<'board'|'timeline'>('board');
   const [showBoardMemos, setShowBoardMemos] = useState(false);
   const [memoHighlight, setMemoHighlight] = useState<string | null>(null);
@@ -168,7 +175,7 @@ export function App() {
     if(saveTimer.current)clearTimeout(saveTimer.current);
     try {
       await save(next);
-      setData(next);setConnectionMode('board');setQuickMemo(false);setMemoOrder('asc');setView('notes');setSelected(null);setMobileTarget(null);setTimelineKeyword(null);editor.reset();setLinkSource(null);setMemoHighlight(null);setSearch('');setRenameUndo(null);setSettings(false);setBatch(false);setNumbers(false);setRenaming(false);setMerging(false);setShowBoardMemos(false);setShowKeywordList(true);
+      setData(next);setConnectionMode('board');setQuickMemo(false);setView('notes');setSelected(null);setMobileTarget(null);setTimelineKeyword(null);editor.reset();setLinkSource(null);setMemoHighlight(null);setSearch('');setRenameUndo(null);setSettings(false);setBatch(false);setNumbers(false);setRenaming(false);setMerging(false);setShowBoardMemos(false);setShowKeywordList(true);
       scrollPositions.current={notes:0,keywords:0,board:0,timeline:0,sidebar:0};
       if(notesPanel.current)notesPanel.current.scrollTop=0;
       if(keywordPanel.current)keywordPanel.current.scrollTop=0;

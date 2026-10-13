@@ -16,6 +16,9 @@ dialog.action-menu{position:fixed;inset:auto;margin:0;padding:12px;border:1px so
 .connection{gap:6px;flex-wrap:wrap;padding:3px 0}
 .connection .linked-word{font-size:14px;min-width:0}
 .connection-kind{font-size:12px;color:#606b59}
+.connection-controls{display:flex;align-items:center;gap:4px;flex:none}
+.connection-controls button{white-space:nowrap;min-height:var(--control-height);padding:4px 6px;font-size:12px}
+.connection-controls .link-kind-toggle[aria-pressed=true]{background:#e9eee5;border-color:#829b74;color:#344c2e}
 .connection button.connection-toggle{border-style:dashed;background:#f4f6f1;color:#64725e;min-width:var(--control-height)}
 .connection button.connection-toggle[aria-pressed=true]{border-style:solid;border-color:#4c624d;background:#4c624d;color:white;font-weight:600}
 .connection-line{width:18px}
