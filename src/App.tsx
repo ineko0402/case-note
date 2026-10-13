@@ -1,3 +1,5 @@
+import { MemoTitle } from './MemoTitle';
+import { applyKeywordClassification, noteMatches } from './model';
 import { SearchField } from './SearchField';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { backupFilename, emptyData, personWords, keywordCounts, keywords, connect, moveRelative, completeOrder, type Data } from './model';
@@ -147,13 +149,13 @@ export function App() {
   const keywordIds = completeOrder(data.keywordOrder, [...counts.keys()]);
   const noteIds = completeOrder(data.noteOrder, data.notes.map(note => note.id));
   const organizedNotes = noteIds.map(id => data.notes.find(note => note.id === id)!);
-  const notes = (view === 'notes' ? memoOrder === 'desc' ? [...data.notes].reverse() : data.notes : organizedNotes).filter(note => note.id === editing || ((view === 'notes' || !selected || keywords(note.text).some(word => personWords(data, selected).includes(word))) && note.text.toLocaleLowerCase().includes(search.toLocaleLowerCase()) && (!memoConnecting || (keywords(note.text).includes(linkSource!) && keywords(note.text).some(word => memoConnectionTargets.has(word))))));
+  const notes = (view === 'notes' ? memoOrder === 'desc' ? [...data.notes].reverse() : data.notes : organizedNotes).filter(note => note.id === editing || ((view === 'notes' || !selected || keywords(note.text).some(word => personWords(data, selected).includes(word))) && noteMatches(note,search) && (!memoConnecting || (keywords(note.text).includes(linkSource!) && keywords(note.text).some(word => memoConnectionTargets.has(word))))));
   const dragOrder = useDragOrder((_group, from, to, after) => setData(previous => ({ ...previous, noteOrder: moveRelative(completeOrder(previous.noteOrder, previous.notes.map(note => note.id)), from, to, after) })));
 
   function add(event: FormEvent) {
     event.preventDefault();
     if (!data.draft.trim()) return;
-    setData(previous => ({ ...previous, draft: '', notes: [...previous.notes, { id: crypto.randomUUID(), text: previous.draft, createdAt: new Date().toISOString() }] }));
+    setData(previous => ({ ...previous, draft: '', draftTitle: '', notes: [...previous.notes, { id: crypto.randomUUID(), title: (previous.draftTitle ?? '').trim(), text: previous.draft, createdAt: new Date().toISOString() }] }));
 
   }
   function backup() {
@@ -252,7 +254,7 @@ export function App() {
         <div className={'organize-body ' + (memoConnecting ? 'connecting-memos' : view === 'board' ? 'with-board' : '')}>
         {view === 'board' && !memoConnecting && <ConnectionsOverview data={data} select={selectKeyword} openNotes={word => { setSelected(word); if(smallScreen)setMobileTarget({kind:'keyword',word});setShowBoardMemos(true); }}/>}
       <div hidden={view === 'board' && !showBoardMemos && !memoConnecting} className="notes-panel" ref={notesPanel} tabIndex={0} role="region" aria-label={view === 'notes' ? 'メモ一覧' : '関連メモ一覧'} onScroll={event => { scrollPositions.current[view] = event.currentTarget.scrollTop; }}>
-        {view === 'notes' && !smallScreen && <form className="composer" onSubmit={add}><label htmlFor="draft">新しいメモ</label><KeywordEditor id="draft" placeholder="文章を書いて選択すると、キーワードにできます" value={data.draft} registered={new Set(counts.keys())} onChange={value => setData({ ...data, draft: value })} onSubmitShortcut={() => add({ preventDefault() {} } as FormEvent)}/><div className="composer-bottom"><small>*から空白までがキーワード</small><button className="primary" disabled={!data.draft.trim()}>追加</button></div></form>}
+        {view === 'notes' && !smallScreen && <form className="composer" onSubmit={add}><label htmlFor="draft">新しいメモ</label><MemoTitle value={data.draftTitle ?? ''} onChange={draftTitle=>setData({...data,draftTitle})}/><KeywordEditor id="draft" placeholder="文章を書いて選択すると、キーワードにできます" value={data.draft} registered={new Set(counts.keys())} onChange={(value,classification) => setData({ ...applyKeywordClassification(data,classification), draft: value })} onSubmitShortcut={() => add({ preventDefault() {} } as FormEvent)}/><div className="composer-bottom"><small>*から空白までがキーワード</small><button className="primary" disabled={!data.draft.trim()}>追加</button></div></form>}
         <div className="list-heading"><h2>{selected && view !== 'notes' ? '関連するメモ' : 'メモ'} <span>{notes.length}</span></h2><SearchField label="メモを検索" placeholder="メモを検索" value={search} onChange={value=>{setSearch(value);setMobileTarget(null);}}/></div>
         {notes.length === 0 && <div className="empty"><p>{data.notes.length ? '該当するメモはありません。' : 'まだメモはありません。'}</p>{!data.notes.length && <p>番号も名前も時間も、まずは別々のキーワードで。<br/>分類や並べ替えは、あとから考えましょう。</p>}</div>}
         <p className="order-hint">{view === 'notes' ? memoOrder==='desc'?'登録順 · 新しい順':'登録順 · 古い順' : smallScreen ? '整理順 · メモをタップして操作' : '整理順 · ハンドルをドラッグして並べ替え'}</p>

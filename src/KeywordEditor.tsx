@@ -1,9 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { keywordize, keywords, selectionWords } from './model';
+import { keywordize, keywords, selectionWords, type KeywordClassification } from './model';
 import { keywordSuggestions } from './inputHelp';
 import { inputCandidates, applyInputCandidates, type InputCandidate } from './inputCandidates';
+import { numericCandidates, numericWord, applyNumericCandidate, type NumericCandidate } from './numericCandidates';
 import { mobileEditorHeight } from './editorHeight';
-type Props = { value: string; onChange: (value: string) => void; registered: Set<string>; id?: string; label?: string; placeholder?: string; autoFocus?: boolean; onSubmitShortcut?: () => void; fitViewport?: boolean };
+type Props = { value: string; onChange: (value: string, classification?: KeywordClassification) => void; registered: Set<string>; id?: string; label?: string; placeholder?: string; autoFocus?: boolean; onSubmitShortcut?: () => void; fitViewport?: boolean };
 export function KeywordEditor({ value, onChange, registered, id, label, placeholder, autoFocus, onSubmitShortcut, fitViewport = false }: Props) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const heightKey = 'case-note-editor-height';
@@ -53,13 +54,26 @@ export function KeywordEditor({ value, onChange, registered, id, label, placehol
     return () => observer.disconnect();
   }, [fitViewport]);
   const [composing, setComposing] = useState(false);
-  const suggestions = composing ? [] : keywordSuggestions(value, registered);
+  const numbers = composing ? [] : numericCandidates(value);
+  const suggestions = composing ? [] : keywordSuggestions(value, registered).filter(item=>!numericWord(item.word) && !numbers.some(range=>item.start < range.end && item.end > range.start));
   const draftWords = keywords(value);
-  const newCandidates = composing ? [] : inputCandidates(value, registered).filter(item => !item.registered).slice(0, 8);
+  const newCandidates = composing ? [] : inputCandidates(value, registered).filter(item => !item.registered && !numericWord(item.word) && !item.ranges.some(range=>numbers.some(number=>range.start < number.end && range.end > number.start))).slice(0, 8);
+  const [showAllNumbers,setShowAllNumbers] = useState(false);
   const [selection, setSelection] = useState<{ start: number; end: number } | null>(null);
   const [error, setError] = useState('');
   const selected = selection ? value.slice(selection.start, selection.end) : '';
   const words = selectionWords(selected);
+  const selectedNumber = selection ? numericWord(selected) : null;
+  function applyNumber(candidate:NumericCandidate,kind:'sequence'|'person') {
+    try {
+      const result = applyNumericCandidate(value,candidate,kind);
+      onChange(result.text,result.classification);setSelection(null);setError('');
+      requestAnimationFrame(()=>{ref.current?.focus({preventScroll:true});ref.current?.setSelectionRange(result.caret,result.caret);});
+    } catch(cause) {setError((cause as Error).message);}
+  }
+  function numberButtons(candidate:NumericCandidate) {
+    return <>{!candidate.person && <button type="button" onClick={()=>applyNumber(candidate,'sequence')}>時系列 {candidate.number}{registered.has(candidate.number) && <small> · 登録済</small>}</button>}<button type="button" onClick={()=>applyNumber(candidate,'person')}>人物 #{candidate.number}{registered.has('#'+candidate.number) && <small> · 登録済</small>}</button></>;
+  }
   function capture() {
     const element = ref.current;
     setError('');
@@ -81,9 +95,12 @@ export function KeywordEditor({ value, onChange, registered, id, label, placehol
   return <div className="keyword-editor" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setSelection(null); }}>
     <textarea onCompositionStart={()=>setComposing(true)} onCompositionEnd={()=>setComposing(false)} className="editor-input" ref={ref} id={id} aria-label={label} autoFocus={autoFocus} placeholder={placeholder} value={value} onChange={event => { onChange(event.target.value); setSelection(null); }} onSelect={capture} onKeyDown={event => { if (!event.nativeEvent.isComposing && event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); onSubmitShortcut?.(); } if (event.key === 'Escape') setSelection(null); }}/>
     {draftWords.length > 0 && <div className="draft-keywords" role="region" aria-label="入力中のキーワード"><small>キーワード</small><div>{draftWords.map(word => <span className="draft-keyword" key={word}>*{word}</span>)}</div></div>}
-    {selection && words.length > 0 && <div className="keyword-popup" role="group" aria-label="選択した文章をキーワード化" onMouseDown={event => event.preventDefault()}><div className="preview">{words.map((word, index) => <span key={index}>*{word} {registered.has(word) && <small>登録済</small>}</span>)}</div><div className="actions"><button type="button" onClick={() => apply(false)}>{words.length === 1 ? 'キーワードにする' : '分けて登録'}</button>{words.length > 1 && !/[\r\n]/u.test(selected) && <button type="button" onClick={() => apply(true)}>空白を除いて1個にする</button>}<button type="button" onClick={() => setSelection(null)} aria-label="キーワード化を閉じる">閉じる</button></div>{error && <p role="alert">{error}</p>}</div>}
+    {selection && words.length > 0 && !selectedNumber && <div className="keyword-popup" role="group" aria-label="選択した文章をキーワード化" onMouseDown={event => event.preventDefault()}><div className="preview">{words.map((word, index) => <span key={index}>*{word} {registered.has(word) && <small>登録済</small>}</span>)}</div><div className="actions"><button type="button" onClick={() => apply(false)}>{words.length === 1 ? 'キーワードにする' : '分けて登録'}</button>{words.length > 1 && !/[\r\n]/u.test(selected) && <button type="button" onClick={() => apply(true)}>空白を除いて1個にする</button>}<button type="button" onClick={() => setSelection(null)} aria-label="キーワード化を閉じる">閉じる</button></div>{error && <p role="alert">{error}</p>}</div>}
     {suggestions.length > 0 && <div className="keyword-suggestions" aria-label="登録済みキーワードの候補"><small>キーワードにする候補（1か所ずつ）</small><div>{suggestions.map(item=><button type="button" key={item.word} onClick={()=>{const result=keywordize(value,item.start,item.end,false);onChange(result.text);setSelection(null);requestAnimationFrame(()=>{ref.current?.focus();ref.current?.setSelectionRange(result.caret,result.caret);});}}>*{item.word}</button>)}</div></div>}
 
+    {selectedNumber && selection && <div className="keyword-popup" role="group" aria-label="選択した数字の意味" onMouseDown={event=>event.preventDefault()}>{numberButtons({text:selected,...selectedNumber,...selection})}<button type="button" onClick={()=>setSelection(null)}>閉じる</button></div>}
+    {numbers.length > 0 && <div className="numeric-candidates" role="region" aria-label="数字の登録候補"><small>数字は1か所ずつ、意味を選んで登録</small>{(showAllNumbers ? numbers : numbers.slice(0,4)).map(item=><div className="numeric-candidate" key={item.start}><p>{value.slice(Math.max(0,item.start-12),item.start)}<mark>{item.text}</mark>{value.slice(item.end,item.end+12)}</p><div>{numberButtons(item)}</div></div>)}{numbers.length>4 && <button type="button" onClick={()=>setShowAllNumbers(!showAllNumbers)}>{showAllNumbers?'候補を少なく表示':`残り${numbers.length-4}か所も表示`}</button>}</div>}
+    {error && <p role="alert">{error}</p>}
     {newCandidates.length > 0 && <div className="draft-keywords" aria-label="未登録のキーワード候補"><small>登録候補</small><div>{newCandidates.map(item => <button type="button" className="draft-keyword draft-keyword-button" key={item.word} aria-label={`${item.word}をキーワードにする（${item.ranges.length}か所）`} title={`${item.word}をキーワードにする（${item.ranges.length}か所）`} onClick={() => applyCandidate(item)}>{item.word}</button>)}</div></div>}
   </div>;
 }

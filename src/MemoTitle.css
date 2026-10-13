@@ -1,0 +1,12 @@
+.memo-title-field { display: block; margin: 0 0 8px; font-size: 13px; }
+.memo-title-field small { color: #606b59; margin-left: 6px; }
+.memo-title-field input { display: block; width: 100%; min-width: 0; margin-top: 4px; }
+.memo-title { display: block; font-size: 14px; font-weight: 600; margin: 0 0 6px; overflow-wrap: anywhere; }
+.numeric-candidates { margin-top: 8px; }
+.numeric-candidate { border-bottom: 1px solid #dcded8; padding: 6px 0; }
+.numeric-candidate p { margin: 0 0 4px; font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.numeric-candidate mark { background: #e7ebe3; color: inherit; font-weight: 600; }
+.numeric-candidate > div, .reference-kind { display: flex; flex-wrap: wrap; gap: 6px; }
+.numeric-candidate button { padding: 4px 8px; font-size: 13px; }
+.timeline-reference { border: 0; padding: 0; margin: 8px 0; min-width: 0; }
+.reference-kind { margin: 4px 0 8px; }

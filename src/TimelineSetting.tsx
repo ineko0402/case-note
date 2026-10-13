@@ -1,3 +1,4 @@
+import { TimelineReference } from './TimelineReference';
 import { Icon } from './Icon';
 import './Icon.css';
 import { useEffect, useRef, useState } from 'react';
@@ -9,7 +10,7 @@ type Props = { note: Note; data: Data; update: (data: Data) => void };
 export function TimelineSetting({note, data, update, showTime = true, disabled = false, labelled = false}: Props & {showTime?: boolean; disabled?: boolean; labelled?: boolean}) {
   const [open, setOpen] = useState(false);
   const enabled = Object.hasOwn(data.timeline ?? {}, note.id);
-  const time = data.timeline?.[note.id] ?? '時刻不明';
+  const time = data.timeline?.[note.id] ?? '基準なし';
   const label = enabled ? `タイムラインの設定：${time}` : 'タイムラインに追加';
   return <div className="timeline-setting">
     <button className={`timeline-clock${enabled ? ' is-enabled' : ''}`} type="button" disabled={disabled} aria-label={label} title={label} aria-haspopup="dialog" onClick={() => setOpen(true)}>
@@ -60,11 +61,11 @@ function TimelineSettingDialog({note, data, update, close}: Props & {close: () =
     <form onSubmit={event => {event.preventDefault(); update(setTimeline(data, note.id, true, time || null)); close();}}>
       <h2 className="timeline-dialog-heading" tabIndex={-1} autoFocus>{title}</h2>
       <div className="timeline-dialog-body">
-        <section aria-label="対象のメモ"><h3>対象のメモ</h3><p className="timeline-dialog-note">{note.text}</p></section>
-        <label>基準時刻<input type="time" value={time} onChange={event => setTime(event.target.value)}/></label>
-        {candidates.length > 1 && <p>複数の時刻があります。並べる基準を選んでください。</p>}
+        <section aria-label="対象のメモ"><h3>{note.title || '対象のメモ'}</h3><p className="timeline-dialog-note">{note.text}</p></section>
+        <TimelineReference value={time} onChange={setTime} preferSequence={candidates.some(value=>/^\d{1,2}$/u.test(value))}/>
+        {candidates.length > 1 && <p>複数の候補があります。並べる基準を選んでください。</p>}
         <div className="time-candidates">{candidates.map(value => <button type="button" key={value} aria-pressed={time === value} onClick={() => setTime(value)}>{value}</button>)}<button type="button" aria-pressed={!time} onClick={() => setTime('')}>時刻不明</button></div>
-        <p className="muted">{!time ? '時刻不明として末尾に表示します。' : 'この時刻を基準にタイムラインへ並べます。'}閉じると変更は反映されません。</p>
+        <p className="muted">{!time ? '時刻不明として末尾に表示します。' : 'この値を基準にタイムラインへ並べます。'}閉じると変更は反映されません。</p>
       </div>
       <div className="timeline-dialog-actions">
         {enabled && <button type="button" onClick={() => {update(setTimeline(data, note.id, false)); close();}}>タイムラインから外す</button>}

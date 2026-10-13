@@ -1,3 +1,5 @@
+import { TimelineReference } from './TimelineReference';
+import { noteMatches, validTimelineValue } from './model';
 import { SearchField } from './SearchField';
 import { useState } from 'react';
 import { noteTimes, addTimelineNotes, type Data } from './model';
@@ -9,14 +11,16 @@ export function TimelineBulk({data, update, close}: {data: Data; update: (data: 
   const [selected, setSelected] = useState<string[]>([]);
   const [times, setTimes] = useState<Record<string, string>>({});
   const [search, setSearch] = useState('');
-  const visible = candidates.filter(note => note.text.toLocaleLowerCase().includes(search.toLocaleLowerCase()));
+  const visible = candidates.filter(note => noteMatches(note,search));
   const hiddenSelected = selected.filter(id => !visible.some(note => note.id === id)).length;
   function initial(id: string) {
     const note = candidates.find(note => note.id === id)!;
     const options = noteTimes(data, note);
     return options.length === 1 ? options[0] : '';
   }
+  const invalid = selected.some(id=>{const value=times[id] ?? initial(id);return value && !validTimelineValue(value);});
   function add() {
+    if(invalid)return;
     update(addTimelineNotes(data, selected.map(id => ({id, time: (times[id] ?? initial(id)) || null}))));
     close();
   }
@@ -31,19 +35,19 @@ export function TimelineBulk({data, update, close}: {data: Data; update: (data: 
         const options = noteTimes(data, note);
         const time = times[note.id] ?? initial(note.id);
         return <article key={note.id} className={checked ? 'selected-bulk-note' : undefined}>
-          <label className="bulk-note"><input type="checkbox" checked={checked} onChange={event => setSelected(previous => event.target.checked ? [...previous, note.id] : previous.filter(id => id !== note.id))}/><span>{note.text}</span></label>
+          <label className="bulk-note"><input type="checkbox" checked={checked} onChange={event => setSelected(previous => event.target.checked ? [...previous, note.id] : previous.filter(id => id !== note.id))}/><span>{note.title && <strong className="memo-title">{note.title}</strong>}{note.text}</span></label>
           {checked && <>
-            <label className="bulk-time">基準時刻<input type="time" aria-label={`メモ${candidates.indexOf(note) + 1}の基準時刻`} value={time} onChange={event => setTimes(previous => ({...previous, [note.id]: event.target.value}))}/></label>
-            <div className="time-candidates">{options.map(value => <button key={value} aria-pressed={time === value} onClick={() => setTimes(previous => ({...previous, [note.id]: value}))}>{value}</button>)}<button aria-pressed={!time} onClick={() => setTimes(previous => ({...previous, [note.id]: ''}))}>時刻不明</button></div>
-            {options.length > 1 && !time && <p className="muted">複数の時刻があります。選ばなければ時刻不明で追加します。</p>}
+            <TimelineReference label={`メモ${candidates.indexOf(note)+1}の基準`} value={time} onChange={value=>setTimes(previous=>({...previous,[note.id]:value}))} preferSequence={options.some(value=>/^\d{1,2}$/u.test(value))}/>
+            <div className="time-candidates">{options.map(value => <button key={value} aria-pressed={time === value} onClick={() => setTimes(previous => ({...previous, [note.id]: value}))}>{value}</button>)}<button aria-pressed={!time} onClick={() => setTimes(previous => ({...previous, [note.id]: ''}))}>基準なし</button></div>
+            {options.length > 1 && !time && <p className="muted">複数の候補があります。選ばなければ基準なしで追加します。</p>}
           </>}
         </article>;
       })}</div>
       {!visible.length && <p className="muted">{candidates.length ? '検索に一致するメモはありません。検索を解除してください。' : includeUntimed ? '追加できる未登録メモはありません。' : '時間入りの未登録メモがありません。時間なしのメモも候補に含められます。'}</p>}
     </div>
     <div className="timeline-bulk-footer">
-      <div><strong>{selected.length}件選択</strong>{hiddenSelected > 0 && <p role="status">うち{hiddenSelected}件は検索で隠れていますが、追加対象です。</p>}<p className="muted">基準時刻が空欄のメモは、時刻不明で末尾に表示します。</p></div>
-      <div className="actions"><button onClick={close}>閉じる</button><button className="primary" disabled={!selected.length} onClick={add}>{selected.length}件を追加</button></div>
+      <div>{invalid && <p role="alert">時刻はHH:MM、時系列番号は0〜99で指定してください。</p>}<strong>{selected.length}件選択</strong>{hiddenSelected > 0 && <p role="status">うち{hiddenSelected}件は検索で隠れていますが、追加対象です。</p>}<p className="muted">並べる基準が空欄のメモは、基準なしで末尾に表示します。</p></div>
+      <div className="actions"><button onClick={close}>閉じる</button><button className="primary" disabled={!selected.length || invalid} onClick={add}>{selected.length}件を追加</button></div>
     </div>
   </section>;
 }
