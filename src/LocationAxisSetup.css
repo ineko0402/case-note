@@ -1,0 +1,47 @@
+.location-axis-dialog{width:calc(100% - 24px);max-width:860px;max-height:calc(100dvh - 32px);scrollbar-gutter:auto}
+.location-axis-dialog[open]{display:flex;flex-direction:column;overflow:hidden}
+.location-axis-header,.location-axis-footer{flex:none;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #dce1d5}
+.location-axis-footer{justify-content:flex-end;border-bottom:0;border-top:1px solid #dce1d5;flex-wrap:wrap}
+.location-axis-footer [role=alert]{flex:1;min-width:160px;color:#875024;font-size:13px}
+.location-axis-body{overflow:auto;min-height:0;overscroll-behavior:contain}
+.location-axis-selectors{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;padding:18px}
+.location-axis-selectors>section{min-width:0}
+.location-axis-title{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.location-axis-title h3{font-size:14px;color:#475841;margin:0}
+.location-axis-title>span{font-size:12px;color:#606b59}
+.location-axis-title>button{font-size:12px}
+.location-axis-category{display:flex;align-items:center;gap:6px;font-size:12px}
+.location-axis-category select{min-width:0;max-width:100%;padding:5px 8px;font-size:12px}
+.location-axis-tools{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:8px 0}
+.location-axis-tools button{border:0;background:transparent;padding:2px 0;font-size:12px;color:#405b35;text-decoration:underline}
+.location-person-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.location-person-option{display:flex;flex-direction:column;gap:3px;align-items:flex-start;text-align:left;overflow-wrap:anywhere;min-width:0;padding:9px;font-size:13px;min-height:56px}
+.location-person-option small,.location-time-options small{font-size:11px;display:block;overflow-wrap:anywhere}
+.location-time-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(60px,1fr));gap:7px}
+.location-time-options>button{overflow-wrap:anywhere;min-width:0;padding:8px 5px;font-size:13px}
+.location-person-options [aria-pressed=true],.location-time-options [aria-pressed=true]{background:#eaf0e3;border-color:#819775;color:#405b35}
+.location-axis-dialog .is-existing{background:#f6f6f3;border-style:dashed;opacity:1;color:#606b59}
+.location-time-inputs{border-top:1px solid #dce1d5;margin-top:12px;padding-top:10px}
+.location-time-inputs summary,.location-axis-existing summary{cursor:pointer;font-size:13px;color:#405b35}
+.location-time-range{display:flex;align-items:flex-end;gap:8px;margin-top:10px}
+.location-time-range label{display:grid;gap:4px;min-width:0;flex:1;font-size:12px}
+.location-time-range input{width:100%;min-width:0;padding:6px}
+.location-time-range button{flex:none;font-size:12px}
+.location-time-free{margin-top:12px}
+.location-time-free label{display:grid;gap:4px;font-size:12px}
+.location-time-free textarea{min-height:70px;font-size:13px;line-height:1.6;padding:6px}
+.location-time-free button{font-size:12px;margin-top:6px}
+.location-axis-preview{padding:16px 18px;background:#f6f6f3;border-top:1px solid #dce1d5}
+.location-axis-preview-scroll{overflow:auto;max-width:100%}
+.location-preview-table{font-size:12px}
+.location-axis-dialog .location-preview-table th,.location-axis-dialog .location-preview-table td{min-width:64px;padding:6px;max-width:160px}
+.location-axis-dialog .location-preview-table tr>th:first-child{min-width:80px}
+.location-table th.axis-added{background:#eaf0e3;color:#405b35}
+.location-cell-content{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:50px;text-align:center}
+.location-preview-table .location-cell-content{min-height:32px}
+.location-preview-table .location-cell.unknown{background:#fff;color:#606b59}
+.location-preview-table .location-cell.unknown strong{font-size:16px;font-weight:400}
+.location-axis-existing{padding:16px 18px;border-top:1px solid #dce1d5}
+.location-axis-existing h3{font-size:13px;color:#475841;margin:14px 0 6px}
+.location-axis-dialog button[aria-pressed=true]:not(:disabled){border-color:#819775}
+@media(max-width:650px){.location-axis-selectors{grid-template-columns:1fr;gap:20px}.location-axis-footer>.primary{width:100%}}
