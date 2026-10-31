@@ -44,11 +44,9 @@ export function validateData(value: unknown): Data {
   const links = (data.version as number) >= 3 ? data.links : [];
   if (!Array.isArray(links)) throw new Error('つながりの形式が違います。');
   const linkIds = new Set<string>(), pairs = new Set<string>();
-  const identityWords = new Set<string>();
   for (const link of links) {
     if (!link || typeof link.id !== 'string' || !link.id || linkIds.has(link.id) || typeof link.a !== 'string' || typeof link.b !== 'string' || !link.a || !link.b || /[\s*]/u.test(link.a + link.b) || link.a === link.b || !['tentative', 'confirmed'].includes(link.status)) throw new Error('結びの形式が違います。');
     if (link.kind !== undefined && !['related','identity'].includes(link.kind)) throw new Error('結びの種類が違います。');
-    if(link.kind === 'identity' && link.status === 'confirmed') { if(identityWords.has(link.a) || identityWords.has(link.b)) throw new Error('同一人物の確定が重複しています。');identityWords.add(link.a);identityWords.add(link.b); }
     const pair = JSON.stringify([link.a, link.b].sort());
     if (pairs.has(pair)) throw new Error('結びが重複しています。');
     pairs.add(pair); linkIds.add(link.id);
@@ -204,7 +202,6 @@ export function mergeKeywords(data: Data, from: string, to: string, category: st
   const duplicate=links.find(item=>(item.a===link.a&&item.b===link.b)||(item.a===link.b&&item.b===link.a));
   if(duplicate){if(link.kind==='identity'&&duplicate.kind!=='identity'){duplicate.kind='identity';duplicate.status=link.status;}else if((link.kind??'related')===(duplicate.kind??'related')&&link.status==='confirmed')duplicate.status='confirmed';}else links.push(link);
  }
- assertIdentityPairs(links);
  const categories=Object.fromEntries([...Object.entries(data.categories).filter(([key])=>key!==from),[to,category]]);
  const order=data.keywordOrder.includes(to)?data.keywordOrder.filter(item=>item!==from):data.keywordOrder.map(word);
  return {...data,...(data.locations ? {locations:remapLocations(data.locations,from,to)} : {}),notes:data.notes.map(note=>({...note,text:replaceKeyword(note.text,from,to)})),draft:replaceKeyword(data.draft,from,to),categories,keywordOrder:[...new Set(order)],registeredWords:[...new Set((data.registeredWords??[]).map(word))],links};
@@ -217,29 +214,37 @@ export function mergeCandidates(data: Data, source: string, search = ''): string
 
 export function freshData(): Data { return structuredClone(emptyData); }
 
-export function canIdentify(data: Data, link: Link): boolean {
- if(link.kind === 'identity') return true;
- const a=data.categories[link.a], b=data.categories[link.b];
- return (a === 'ナンバー' && b === '人物') || (a === '人物' && b === 'ナンバー');
+/** Identity is an explicit equivalence, independent of category or game. */
+export function canIdentify(_data: Data, link: Link): boolean { return link.a !== link.b; }
+export function changeLink(data: Data, id: string, kind: 'related'|'identity', status: Link['status']): Data {
+ return {...data,links:data.links.map(link=>link.id === id ? {...link,kind,status} : link)};
 }
-export function identityConflicts(data: Data, link: Link): Link[] {
- return link.kind === 'identity' && link.status === 'confirmed' ? data.links.filter(other=>other.id!==link.id&&other.kind==='identity'&&other.status==='confirmed'&&[other.a,other.b].some(word=>word===link.a||word===link.b)) : [];
+export function personWords(data: Data, word: string): string[] {
+ const members=new Set([word]);
+ let changed=true;
+ while(changed){changed=false;for(const link of data.links){if(link.kind !== 'identity' || link.status !== 'confirmed')continue;if(members.has(link.a) || members.has(link.b)){for(const item of [link.a,link.b])if(!members.has(item)){members.add(item);changed=true;}}}}
+ return [...members].sort((a,b)=>(data.categories[a] === 'ナンバー' ? 0 : 1)-(data.categories[b] === 'ナンバー' ? 0 : 1) || a.localeCompare(b));
 }
-function assertIdentityPairs(links: Link[]): void {
- const words=new Set<string>();
- for(const link of links) if(link.kind==='identity'&&link.status==='confirmed') { if(words.has(link.a)||words.has(link.b))throw new Error('同一人物の確定が重複します。先に該当する結びを仮に戻してください。');words.add(link.a);words.add(link.b); }
-}
-export function changeLink(data: Data, id: string, kind: 'related'|'identity', status: Link['status'], replace = false): Data {
- const current=data.links.find(link=>link.id===id);if(!current)return data;
- if(kind==='identity'&&!canIdentify(data,current))throw new Error('同一人物はナンバーと人物の間で指定してください。');
- const next={...current,kind,status}, conflicts=identityConflicts(data,next);
- if(conflicts.length&&!replace)throw new Error('別の相手と同一人物として確定済みです。');
- return {...data,links:data.links.map(link=>link.id===id?next:conflicts.some(other=>other.id===link.id)?{...link,status:'tentative'}:link)};
+/** Keep direct evidence links, grouped by the equivalent target they refer to. */
+export function groupedConnections(data: Data, word: string) {
+ const members=personWords(data,word), result=new Map<string,{word:string;members:string[];links:Link[]}>();
+ for(const link of data.links){
+  const other=members.includes(link.a)?link.b:members.includes(link.b)?link.a:null;
+  if(!other || members.includes(other))continue;
+  const peers=personWords(data,other),key=JSON.stringify([...peers].sort());
+  const current=result.get(key) ?? {word:other,members:peers,links:[]};current.links.push(link);result.set(key,current);
+ }
+ return [...result.values()];
 }
 
-export function personWords(data: Data, word: string): string[] {
- const link=data.links.find(link=>link.kind==='identity'&&link.status==='confirmed'&&(link.a===word||link.b===word));
- return link ? [link.a,link.b].sort((a,b)=>(data.categories[a]==='ナンバー'?0:1)-(data.categories[b]==='ナンバー'?0:1)) : [word];
+export function connectionPreviews(data:Data,word:string):{word:string;status:Link['status'];kind:'related'|'identity'}[] {
+ return groupedConnections(data,word).flatMap(group=>{
+  const result:{word:string;status:Link['status'];kind:'related'|'identity'}[]=[];
+  const related=group.links.filter(link=>link.kind !== 'identity');
+  if(related.length)result.push({word:group.word,kind:'related',status:related.some(link=>link.status === 'confirmed')?'confirmed':'tentative'});
+  if(group.links.some(link=>link.kind === 'identity' && link.status === 'tentative'))result.push({word:group.word,kind:'identity',status:'tentative'});
+  return result;
+ });
 }
 
 export type KeywordClassification = { word: string; category: '時間' | 'ナンバー' };

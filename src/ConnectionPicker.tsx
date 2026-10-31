@@ -1,3 +1,4 @@
+import { KeywordCandidateList } from './KeywordCandidateList';
 import { SearchField } from './SearchField';
 import { useEffect, useRef } from 'react';
 import type { ConnectionCandidate, ConnectionOptions } from './connectionCandidates';
@@ -23,7 +24,7 @@ function ConnectionControls({source, categories, options, change, close}: Props)
   </>;
 }
 
-function ConnectionCommit({source, candidates, options, change, submit, undo}: Props) {
+export function ConnectionCommit({source, candidates, options, change, submit, undo}: Props) {
   const target = candidates.find(item => item.word === options.target);
   return <>
     <div className="connect-selection" aria-label="つなげる相手の確認"><span>{target ? <>*{source} → <strong>*{target.word}</strong> <small>分類：{target.category}</small></> : options.mode === 'memo' ? '本文中の強調されたキーワードを選んでください。' : '一覧から相手を選んでください。'}</span><button type="button" className="primary" disabled={!target || !!target.status} onClick={submit}>仮につなげる</button></div>
@@ -61,22 +62,15 @@ export function ConnectionPickerDialog(props: Props) {
     return x < box.left || x > box.right || y < box.top || y > box.bottom;
   }
   const {options, change, candidates, categories} = props;
-  function candidateButton(item: ConnectionCandidate) {
-    return <button type="button" key={item.word} disabled={!!item.status} aria-pressed={options.target === item.word} className={item.sharedNotes ? 'shared-candidate' : ''} onClick={() => change({...options, target: options.target === item.word ? null : item.word})}><span>*{item.word}</span><small>分類：{item.category}</small>{item.sharedNotes > 0 && <small>同じメモ {item.sharedNotes}件</small>}{item.status && <small>つながり済 · {item.status === 'confirmed' ? '確定' : '仮'}</small>}</button>;
-  }
-  const shared = candidates.filter(item => item.sharedNotes > 0);
   return <dialog ref={dialog} className="settings-dialog connect-dialog" aria-label={`*${props.source} とつなげる相手を選択`} onCancel={props.close}
     onPointerDown={event => {outsidePress.current = event.target === event.currentTarget && outside(event.clientX, event.clientY);}}
     onClick={event => {if (outsidePress.current && event.target === event.currentTarget && outside(event.clientX, event.clientY)) props.close(); outsidePress.current = false;}}>
     <div className="connect-dialog-controls"><ConnectionControls {...props}/></div>
     <div className="connect-candidates" tabIndex={0} aria-label="つなげる相手の候補">
-      {shared.length > 0 && <section><h3>同じメモで使った相手 <span>{shared.length}</span></h3><div className="connect-chips">{shared.map(candidateButton)}</div></section>}
-      {categories.map(category => {
-        const items = candidates.filter(item => item.category === category && !item.sharedNotes);
-        return items.length > 0 && <section key={category}><h3>その他の相手 · 分類：{category} <span>{items.length}</span></h3><div className="connect-chips">{items.map(candidateButton)}</div></section>;
-      })}
-      {!candidates.length && <p className="muted">条件に合う相手がいません。絞り込みを解除するか、メモから相手のキーワードを登録してください。</p>}
+      <KeywordCandidateList candidates={candidates} categories={categories} target={options.target} select={word=>change({...options,target:options.target === word?null:word})} disableLinked/>
     </div>
     <div className="connect-dialog-footer"><ConnectionCommit {...props}/></div>
   </dialog>;
 }
+
+export function ConnectionInlineToolbar(props:Props) {return <section className="inline-connect-toolbar" aria-label="表示中のメモから相手を選択"><div className="connect-heading"><h2>*{props.source} の相手を本文から選択</h2><button type="button" onClick={props.close}>終了</button></div><ConnectionCommit {...props}/></section>;}

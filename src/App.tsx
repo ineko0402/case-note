@@ -1,3 +1,4 @@
+import { unmarkKeyword, type KeywordOccurrence } from './keywordOccurrence';
 import { LocationTable } from './LocationTable';
 import { deleteNote } from './locations';
 import { DesktopToolbar } from './DesktopToolbar';
@@ -32,7 +33,7 @@ import { QuickMemo } from './QuickMemo';
 import { KeywordDragProvider } from './KeywordDrag';
 import { useSmallScreen } from './useSmallScreen';
 import { connectionCandidates, filterConnectionCandidates, initialConnectionOptions, type ConnectionOptions } from './connectionCandidates';
-import { ConnectionMemoToolbar, ConnectionPickerDialog } from './ConnectionPicker';
+import { ConnectionMemoToolbar, ConnectionInlineToolbar, ConnectionPickerDialog } from './ConnectionPicker';
 export function App() {
   const smallScreen = useSmallScreen();
   const [quickMemo, setQuickMemo] = useState(false);
@@ -90,7 +91,8 @@ export function App() {
   const [linkSource, setLinkSource] = useState<string | null>(null);
   const [connectionOptions, setConnectionOptions] = useState<ConnectionOptions>(() => initialConnectionOptions('list'));
   const [lastConnection, setLastConnection] = useState<string | null>(null);
-  const memoConnecting = !!linkSource && connectionOptions.mode === 'memo';
+  const memoConnecting = smallScreen && !!linkSource && connectionOptions.mode === 'memo';
+  const inlineConnecting = !smallScreen && !!linkSource && connectionOptions.mode === 'memo';
   useEffect(() => {
     document.documentElement.classList.toggle('mobile-memo-page', smallScreen && !memoConnecting);
     return () => document.documentElement.classList.remove('mobile-memo-page');
@@ -102,8 +104,8 @@ export function App() {
   function beginConnecting(mode: ConnectionOptions['mode'], source = selected) {
     if (!source || editing !== null) return;
     setDesktopTarget(null);
-    if(mode === 'memo' && (view === 'notes' || view === 'timeline')) changeView('keywords');
-    if (mode === 'memo') setSelected(source);
+    if(smallScreen && mode === 'memo' && (view === 'notes' || view === 'timeline')) changeView('keywords');
+    if (smallScreen && mode === 'memo') setSelected(source);
     setConnectionOptions(initialConnectionOptions(mode)); setLastConnection(null); setLinkSource(source);
   }
   function submitConnection() {
@@ -121,11 +123,11 @@ export function App() {
   }
   const connectionProps = {source: linkSource ?? '', categories: connectionCategories, candidates: visibleConnectionCandidates, options: connectionOptions, change: setConnectionOptions, submit: submitConnection, close: () => setLinkSource(null), undo: lastConnection && data.links.some(link => link.id === lastConnection) ? undoConnection : undefined};
   useEffect(() => {
-    if (!memoConnecting) return;
+    if (!memoConnecting && !inlineConnecting) return;
     function escape(event: KeyboardEvent) {if (event.key === 'Escape' && !document.querySelector('dialog[open]')) setLinkSource(null);}
     window.addEventListener('keydown', escape);
     return () => window.removeEventListener('keydown', escape);
-  }, [memoConnecting]);
+  }, [memoConnecting,inlineConnecting]);
   useEffect(() => {
     if (!memoConnecting) return;
     const viewport = window.visualViewport;
@@ -222,12 +224,19 @@ export function App() {
     setDesktopTarget(previous => previous?.word === to ? {...previous,word:from} : previous);
     setRenameUndo(null);
   }
+  const [unmarkUndo,setUnmarkUndo]=useState<{before:Data;after:Data;word:string}|null>(null);
+  useEffect(()=>{if(unmarkUndo && data !== unmarkUndo.after)setUnmarkUndo(null);},[data,unmarkUndo]);
+  function unmarkSelectedKeyword(){
+    if(!desktopTarget?.occurrence)return;
+    try{const next=unmarkKeyword(data,desktopTarget.word,desktopTarget.occurrence);setUnmarkUndo({before:data,after:next,word:desktopTarget.word});setData(next);setDesktopTarget(null);}
+    catch(reason){setMessage((reason as Error).message);setDesktopTarget(null);}
+  }
   const activeKeyword = linkSource ?? (smallScreen ? mobileTarget?.kind === 'keyword' ? mobileTarget.word : null : desktopTarget?.word ?? (view === 'notes' ? memoHighlight : selected));
-  const keywordInspection = !smallScreen && !memoConnecting && editing === null ? {data,active:activeKeyword,enabled:!desktopTarget,open:(word:string,anchor:HTMLButtonElement)=>setDesktopTarget({word,anchor})} : undefined;
+  const keywordInspection = !smallScreen && !memoConnecting && editing === null ? {data,active:activeKeyword,enabled:!desktopTarget && !inlineConnecting,pickTarget:inlineConnecting?connectionOptions.target:null,open:(word:string,anchor:HTMLButtonElement,occurrence?:KeywordOccurrence)=>{if(inlineConnecting){const candidate=visibleConnectionCandidates.find(item=>item.word === word);if(candidate && !candidate.status)setConnectionOptions(previous=>({...previous,target:word}));return;}setDesktopTarget({word,anchor,occurrence});}} : undefined;
   const activeMembers=activeKeyword?personWords(data,activeKeyword):[];
   const relatedWords = new Set([...activeMembers.filter(word=>word!==activeKeyword),...data.links.filter(link=>activeMembers.includes(link.a)||activeMembers.includes(link.b)).flatMap(link=>[link.a,link.b]).filter(word=>word!==activeKeyword)]);
-  function rendered(text: string) {
-    return <KeywordText text={text} inspection={keywordInspection} active={activeKeyword} related={relatedWords} connectionTargets={memoConnecting ? new Map(allConnectionCandidates.map(item => [item.word, {...item, eligible: memoConnectionTargets.has(item.word)}])) : undefined} connectionTarget={connectionOptions.target} onSelect={word => { if (view === 'notes') {if(smallScreen){setMemoHighlight(word);setSelected(word);setMobileTarget({kind:'keyword',word});}else setMemoHighlight(memoHighlight === word ? null : word);} else selectKeyword(word); }}/>;
+  function rendered(text: string,noteId?:string) {
+    return <KeywordText text={text} noteId={noteId} inspection={keywordInspection} active={activeKeyword} related={relatedWords} connectionTargets={memoConnecting ? new Map(allConnectionCandidates.map(item => [item.word, {...item, eligible: memoConnectionTargets.has(item.word)}])) : undefined} connectionTarget={connectionOptions.target} onSelect={word => { if (view === 'notes') {if(smallScreen){setMemoHighlight(word);setSelected(word);setMobileTarget({kind:'keyword',word});}else setMemoHighlight(memoHighlight === word ? null : word);} else selectKeyword(word); }}/>;
   }
   const actionNote = mobileTarget?.kind === 'memo' ? data.notes.find(note=>note.id === mobileTarget.id) : undefined;
   const actionIndex = actionNote ? notes.findIndex(note=>note.id === actionNote.id) : -1;
@@ -250,7 +259,7 @@ export function App() {
     {!ready ? <p>{loadFailed ? 'データを保護するため入力を停止しています。' : 'メモを読み込んでいます。'}</p> : <>
     {linkSource && connectionOptions.mode === 'list' && <ConnectionPickerDialog {...connectionProps}/>}
     {management && <dialog ref={managementDialog} className="settings-dialog data-management-dialog" aria-label="データ管理" onCancel={event=>{if(replacing)event.preventDefault();else setManagement(false);}}><DataManagement data={data} update={setData} backup={backup} apply={replaceData} busy={replacing} close={()=>setManagement(false)}/></dialog>}
-    {merging && actionKeyword && <dialog ref={mergeDialog} className="settings-dialog" aria-label="キーワードを統合" onCancel={()=>setMerging(false)}><KeywordMerge word={actionKeyword} data={data} close={()=>setMerging(false)} apply={applyKeywordChange}/></dialog>}
+    {merging && actionKeyword && <dialog ref={mergeDialog} className="settings-dialog connect-dialog" aria-label="キーワードを統合" onCancel={()=>setMerging(false)}><KeywordMerge word={actionKeyword} data={data} close={()=>setMerging(false)} apply={applyKeywordChange}/></dialog>}
     {renaming && actionKeyword && <dialog ref={renameDialog} className="settings-dialog" aria-label="キーワードの名前を変更" onCancel={() => setRenaming(false)}><KeywordRename word={actionKeyword} data={data} close={() => setRenaming(false)} apply={applyKeywordChange}/></dialog>}
     {settings && <dialog ref={settingsDialog} className="settings-dialog" aria-label="分類設定" onCancel={() => setSettings(false)}><CategorySettings data={data} update={setData} close={() => setSettings(false)} options={!smallScreen ? {numbers:()=>setNumbers(true),batch:()=>setBatch(true)} : undefined}/></dialog>}
     {numbers && <dialog ref={numbersDialog} className="settings-dialog" aria-label="番号をまとめて追加" onCancel={() => setNumbers(false)}><NumberRegistration data={data} update={setData} close={() => setNumbers(false)}/></dialog>}
@@ -258,6 +267,8 @@ export function App() {
     {smallScreen && view === 'notes' && <div className="memo-view-controls" aria-label="メモの操作">{smallScreen && <button className="primary" onClick={()=>setQuickMemo(true)}>新しいメモ</button>}<label>登録順<select aria-label="メモの登録順" value={memoOrder} onChange={event=>{setMemoOrder(event.target.value as 'asc'|'desc');scrollPositions.current.notes=0;if(notesPanel.current)notesPanel.current.scrollTop=0;}}><option value="asc">古い順</option><option value="desc">新しい順</option></select></label></div>}
     {smallScreen && (view === 'board' || view === 'timeline') && <div className="connection-view-controls" aria-label="つながりの表示方法"><div className="memo-mode-switch"><button aria-pressed={view === 'board'} onClick={()=>{setConnectionMode('board');changeView('board');setLinkSource(null);}}>関係</button><button aria-pressed={view === 'timeline'} onClick={()=>{setConnectionMode('timeline');changeView('timeline');setLinkSource(null);}}>時系列</button></div></div>}
     {!smallScreen && <DesktopToolbar view={view} memoOrder={memoOrder} setMemoOrder={value=>{setMemoOrder(value);scrollPositions.current.notes=0;if(notesPanel.current)notesPanel.current.scrollTop=0;}} switchConnection={value=>{setConnectionMode(value);changeView(value);setLinkSource(null);}} showKeywords={showKeywordList} toggleKeywords={()=>setShowKeywordList(value=>!value)} connecting={memoConnecting} openSettings={()=>setSettings(true)} search={view === 'notes' ? search : keywordSearch} setSearch={value=>{if(view === 'notes')setSearch(value);else setKeywordSearch(value);setMobileTarget(null);}}/>}
+    {inlineConnecting && <ConnectionInlineToolbar {...connectionProps}/>}
+    {unmarkUndo && data === unmarkUndo.after && <div className="keyword-unmark-undo" role="status"><span>*{unmarkUndo.word} のキーワード化を解除しました。</span><button type="button" onClick={()=>{setData(unmarkUndo.before);setUnmarkUndo(null);}}>元に戻す</button></div>}
     {view === 'locations' ? <main className={'workspace organizing' + (showKeywordList ? '' : ' sidebar-collapsed')}>
       {showKeywordList && <KeywordSidebar desktop search={keywordSearch} hide={()=>setShowKeywordList(false)} data={data} counts={counts} selected={selected} setSelected={setSelected} selectKeyword={word=>setSelected(previous=>previous === word ? null : word)} setData={setData} settings={settings} setSettings={setSettings} setBatch={setBatch} setNumbers={setNumbers} keywordPanel={keywordPanel} onScroll={top=>{scrollPositions.current.sidebar=top;}}/>}
       <LocationTable data={data} update={setData} search={keywordSearch} selected={selected} clearSelection={()=>setSelected(null)}/>
@@ -280,7 +291,7 @@ export function App() {
       </div>
     </main>}
     {showMobileBar && <MobileActionBar word={mobileTarget?.kind === 'keyword' ? actionKeyword : null} selectLinkedWord={word=>setMobileTarget({kind:'keyword',word})} note={actionNote} data={data} update={setData} close={()=>setMobileTarget(null)} edit={()=>{if(actionNote)editor.begin(actionNote);}} remove={()=>{if(!actionNote)return;setData(deleteNote(data,actionNote.id));setMobileTarget(null);}} move={view !== 'notes' && view !== 'timeline' ? direction=>{if(!actionNote)return;const other=notes[actionIndex+direction];if(other)setData({...data,noteOrder:moveRelative(noteIds,actionNote.id,other.id,direction===1)});} : undefined} canUp={actionIndex>0} canDown={actionIndex>=0 && actionIndex<notes.length-1} connect={mode=>beginConnecting(mode,actionKeyword)} rename={()=>setRenaming(true)} merge={()=>setMerging(true)}/>}
-    {!smallScreen && desktopTarget && editing === null && !linkSource && !quickMemo && !management && !settings && !batch && !numbers && <DesktopKeywordPanel target={desktopTarget} data={data} update={setData} close={()=>setDesktopTarget(null)} select={word=>setDesktopTarget(previous=>previous?{...previous,word}:null)} connect={mode=>beginConnecting(mode,desktopTarget.word)} rename={()=>setRenaming(true)} merge={()=>setMerging(true)} showNotes={showKeywordNotes}/>}
+    {!smallScreen && desktopTarget && editing === null && !linkSource && !quickMemo && !management && !settings && !batch && !numbers && <DesktopKeywordPanel target={desktopTarget} data={data} update={setData} close={()=>setDesktopTarget(null)} select={word=>setDesktopTarget(previous=>previous?{...previous,word,occurrence:undefined}:null)} connect={mode=>beginConnecting(mode,desktopTarget.word)} rename={()=>setRenaming(true)} merge={()=>setMerging(true)} showNotes={showKeywordNotes} unmark={desktopTarget.occurrence ? unmarkSelectedKeyword : undefined}/>}
     <footer><span className="save-status" role="status">{status}</span><p>メモはこのブラウザに保存されます。端末間の自動同期はありません。</p><div>{smallScreen && <button onClick={()=>setManagement(true)}>データ管理</button>}<InstallApp/></div><p role="status">{message}</p></footer>
     </>}
   </div></KeywordDragProvider>;
