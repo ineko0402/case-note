@@ -57,3 +57,5 @@
 .location-note{padding:12px;background:#f3f5ef;border:1px solid #dcded8;border-radius:5px;margin-top:12px}
 .location-note p{white-space:pre-wrap;max-height:260px;overflow:auto}
 .location-note .list-heading h3{margin:0}
+.location-heading-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.location-heading-actions button[aria-pressed=true]{background:#eaf0e3;border-color:#819775}
