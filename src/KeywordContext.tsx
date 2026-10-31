@@ -16,5 +16,5 @@ export function KeywordContext({data, selected, editing, linkSource, setData, se
           {mobile && <button type="button" onClick={clearSelection}>すべてのメモを表示</button>}
         </section>}
         {selected && <KeywordConnections word={selected} data={data} update={setData} select={selectKeyword} begin={beginConnecting} hideBegin={mobile} isChoosing={!!linkSource || editing !== null}/>}
-<div className="organize-switch">{!showKeywordList && <button onClick={() => setShowKeywordList(true)}>キーワード一覧を表示</button>}{view === 'board' && <button aria-expanded={showBoardMemos} onClick={() => setShowBoardMemos(!showBoardMemos)}>{showBoardMemos ? '関連メモを隠す' : '関連メモを表示'}</button>}</div></div>;
+<div className="organize-switch">{mobile && !showKeywordList && <button onClick={() => setShowKeywordList(true)}>キーワード一覧を表示</button>}{view === 'board' && <button aria-expanded={showBoardMemos} onClick={() => setShowBoardMemos(!showBoardMemos)}>{showBoardMemos ? '関連メモを隠す' : '関連メモを表示'}</button>}</div></div>;
 }
