@@ -1,14 +1,15 @@
+import type { KeywordOccurrence } from './keywordOccurrence';
 import { useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ActionMenu } from './ActionMenu';
 import { KeywordConnections } from './KeywordConnections';
-import { changeKeywordCategory, type Data } from './model';
+import { changeKeywordCategory, personWords, type Data } from './model';
 import { floatingPanelPosition } from './floatingPanel';
 import './DesktopKeyword.css';
 
-export type DesktopKeywordTarget = {word:string;anchor:HTMLButtonElement};
-type Props = {target:DesktopKeywordTarget;data:Data;update:(data:Data)=>void;close:()=>void;select:(word:string)=>void;connect:(mode:'list'|'memo')=>void;rename:()=>void;merge:()=>void;showNotes:()=>void};
-export function DesktopKeywordPanel({target,data,update,close,select,connect,rename,merge,showNotes}:Props) {
+export type DesktopKeywordTarget = {word:string;anchor:HTMLButtonElement;occurrence?:KeywordOccurrence};
+type Props = {target:DesktopKeywordTarget;data:Data;update:(data:Data)=>void;close:()=>void;select:(word:string)=>void;connect:(mode:'list'|'memo')=>void;rename:()=>void;merge:()=>void;showNotes:()=>void;unmark?:()=>void};
+export function DesktopKeywordPanel({target,data,update,close,select,connect,rename,merge,showNotes,unmark}:Props) {
   const ref=useRef<HTMLDialogElement>(null);
   const closeRef=useRef(close);closeRef.current=close;
   useLayoutEffect(()=>{
@@ -50,9 +51,12 @@ export function DesktopKeywordPanel({target,data,update,close,select,connect,ren
   },[target.anchor]);
   return createPortal(<dialog ref={ref} className="desktop-keyword-panel" aria-label={`*${target.word}の操作`} onCancel={event=>{event.preventDefault();close();}}>
     <div className="desktop-keyword-heading"><h2>*{target.word}</h2><button type="button" onClick={close} aria-label="キーワードの操作を閉じる">閉じる</button></div>
-    <div className="desktop-keyword-tools"><ActionMenu label="つなげる" title={`*${target.word}からつなげる`}>{done=><><button type="button" onClick={()=>{done();connect('list');}}>一覧から選ぶ</button><button type="button" onClick={()=>{done();connect('memo');}}>メモから選ぶ</button></>}</ActionMenu><button type="button" onClick={showNotes}>関連メモを表示</button></div>
-    <label className="desktop-keyword-category">分類<select value={data.categories[target.word]??'未分類'} onChange={event=>update(changeKeywordCategory(data,target.word,event.target.value))}>{data.categoryOrder.map(category=><option key={category}>{category}</option>)}</select></label>
-    <div className="desktop-keyword-tools"><button type="button" onClick={rename}>名前を変更</button><button type="button" onClick={merge}>キーワードを統合</button></div>
+    <p className="desktop-keyword-context">{data.categories[target.word]??'未分類'}{personWords(data,target.word).length>1 && ` · 同じ対象 ${personWords(data,target.word).length}語`}</p>
+    <div className="desktop-keyword-tools"><button type="button" onClick={showNotes}>関連メモ</button><button type="button" onClick={()=>connect('list')}>つなげる…</button><ActionMenu label="その他" title={`*${target.word}のその他の操作`}>{done=><>
+      <label>分類<select value={data.categories[target.word]??'未分類'} onChange={event=>update(changeKeywordCategory(data,target.word,event.target.value))}>{data.categoryOrder.map(category=><option key={category}>{category}</option>)}</select></label>
+      <button type="button" onClick={()=>{done();rename();}}>名前を変更</button><button type="button" onClick={()=>{done();merge();}}>キーワードを統合…</button>
+      {unmark && <><button type="button" onClick={()=>{done();unmark();}}>キーワード解除</button><small className="keyword-unmark-help">押した箇所だけ普通の文字に戻します。</small></>}
+    </>}</ActionMenu></div>
     <div className="context-header"><KeywordConnections word={target.word} data={data} update={update} select={select} begin={connect} isChoosing={false} hideBegin/></div>
   </dialog>,document.body);
 }

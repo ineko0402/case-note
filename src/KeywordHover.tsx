@@ -1,12 +1,13 @@
+import type { KeywordOccurrence } from './keywordOccurrence';
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { DraggableKeyword } from './KeywordDrag';
-import { linkedWords, type Data } from './model';
+import { connectionPreviews, personWords, type Data } from './model';
 import { floatingPanelPosition } from './floatingPanel';
 import './DesktopKeyword.css';
 
-export type KeywordInspection = {data:Data;active:string|null;enabled:boolean;open:(word:string,anchor:HTMLButtonElement)=>void};
-export function KeywordHover({word,className,inspection}: {word:string;className:string;inspection:KeywordInspection}) {
+export type KeywordInspection = {data:Data;active:string|null;enabled:boolean;pickTarget?:string|null;open:(word:string,anchor:HTMLButtonElement,occurrence?:KeywordOccurrence)=>void};
+export function KeywordHover({word,className,inspection,occurrence}: {occurrence?:KeywordOccurrence;word:string;className:string;inspection:KeywordInspection}) {
   const [anchor,setAnchor] = useState<HTMLButtonElement|null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>|null>(null);
   const id = useId();
@@ -19,7 +20,7 @@ export function KeywordHover({word,className,inspection}: {word:string;className
   useEffect(()=>()=>{if(timer.current)clearTimeout(timer.current);},[]);
   useEffect(()=>{if(!inspection.enabled)hide();},[inspection.enabled]);
   return <>
-    <DraggableKeyword word={word} className={className} pressed={word===inspection.active} onClick={event=>{hide();inspection.open(word,event.currentTarget);}} buttonProps={{
+    <DraggableKeyword word={word} className={className} pressed={word===inspection.active} onClick={event=>{hide();inspection.open(word,event.currentTarget,occurrence);}} buttonProps={{
       'aria-haspopup':'dialog','aria-describedby':anchor?id:undefined,
       onPointerEnter:event=>{if(event.pointerType==='mouse')reveal(event.currentTarget);},
       onPointerLeave:hide,onFocus:event=>reveal(event.currentTarget),onBlur:hide,onDragStart:hide,
@@ -47,6 +48,7 @@ function KeywordTooltip({id,word,data,anchor,close}: {id:string;word:string;data
     window.addEventListener('keydown',escape);
     return ()=>{window.removeEventListener('scroll',dismiss,true);window.removeEventListener('resize',dismiss);window.removeEventListener('keydown',escape);};
   },[anchor]);
-  const links=linkedWords(data,word);
-  return <div ref={ref} id={id} role="tooltip" className="keyword-tooltip"><strong>*{word}</strong><span>つながり {links.length}</span>{!links.length?<p>つながりなし</p>:<ul>{links.slice(0,4).map(link=><li key={link.word}><span>*{link.word}</span><small>{link.kind==='identity'?'同一人物 · ':''}{link.status==='confirmed'?'確定':'仮'}</small></li>)}</ul>}{links.length>4&&<p>ほか{links.length-4}件</p>}<p>クリックで操作</p></div>;
+  const members=personWords(data,word);
+  const links=connectionPreviews(data,word);
+  return <div ref={ref} id={id} role="tooltip" className="keyword-tooltip"><strong>*{word}</strong>{members.length>1 && <p>同じ対象：{members.slice(0,4).map(item=>'*'+item).join(' ／ ')}{members.length>4 && ' ほか'}</p>}<span>つながり {links.length}</span>{!links.length?<p>つながりなし</p>:<ul>{links.slice(0,4).map(link=><li key={link.kind+':'+link.word}><span>*{link.word}</span><small>{link.kind==='identity'?'同じ対象かも · ':''}{link.status==='confirmed'?'確定':'仮'}</small></li>)}</ul>}{links.length>4&&<p>ほか{links.length-4}件</p>}<p>クリックで操作</p></div>;
 }
