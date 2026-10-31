@@ -1,0 +1,59 @@
+.location-panel{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;padding:0 8px 8px}
+.location-heading,.location-filters,.location-summary{display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex:none;margin-bottom:12px}
+.location-heading{justify-content:space-between}
+.location-panel button,.location-panel select{font-size:12px}
+.location-summary{padding:10px 12px;background:#edf1e8;border-radius:6px;align-items:flex-start;font-size:13px}
+.location-summary label{display:flex;align-items:center;gap:8px;flex:none}
+.location-summary p{flex:1;min-width:160px;overflow-wrap:anywhere}
+.location-summary select{padding:4px 8px}
+.location-filters{justify-content:space-between;font-size:12px}
+.location-filters label{display:flex;align-items:center;gap:6px}
+.location-filters input,.location-note-options input{width:18px;height:18px;flex:none}
+.location-filters>span,.location-help{color:#606b59;font-size:12px}
+.location-help{margin-top:8px;flex:none}
+.location-selected{margin-bottom:8px;font-size:13px}
+.location-table-scroll{overflow:auto;min-height:0;flex:1;position:relative;border:1px solid #dcded8;border-radius:6px}
+.location-table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
+.location-table caption{text-align:left;padding:8px 12px;color:#606b59;background:#f6f6f3;font-size:12px}
+.location-table th,.location-table td{border-right:1px solid #dcded8;border-bottom:1px solid #dcded8;padding:0;min-width:130px;max-width:240px;overflow-wrap:anywhere}
+.location-table th{padding:10px 12px;background:#edf1e8;font-weight:600}
+.location-table thead th{position:sticky;top:0;z-index:2}
+.location-table tr>th:first-child{position:sticky;left:0;z-index:1;min-width:120px;text-align:left}
+.location-table thead th:first-child{z-index:3}
+.location-cell button{display:flex;flex-direction:column;justify-content:center;gap:4px;width:100%;height:100%;min-height:78px;border:0;border-radius:0;background:transparent;text-align:center;padding:8px 12px;font-size:14px}
+.location-cell button:hover{background:#e6ecdf}
+.location-cell.unknown{background:#fff5df;color:#785a22}
+.location-cell.unknown strong{font-size:21px}
+.location-cell.unknown span{font-size:12px}
+.location-cell.tentative{background:#f8faf5}
+.location-cell.tentative .location-value{border-bottom:1px dashed #8b9d7b}
+.location-cell.confirmed{background:#e9f0e2;color:#344c2c}
+.location-cell.multiple{background:#fcf0e8}
+.location-value{display:block;width:100%}
+.location-value small{display:block;font-size:11px}
+.location-warning{color:#875024;font-size:12px}
+.location-empty{padding:24px 12px;line-height:1.8;font-size:14px}
+.location-empty p+p{margin-top:12px}
+.location-dialog .category-settings{border:0}
+.location-dialog h3{margin:18px 0 8px;color:#475841;font-size:13px}
+.location-dialog p{font-size:13px;overflow-wrap:anywhere}
+.location-add,.location-entry-fields,.location-records>section>div:first-child{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.location-add input,.location-add select{min-width:0;flex:1}
+.location-axis-list{list-style:none;padding:0;margin:10px 0}
+.location-axis-list li{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid #e4e6df}
+.location-axis-list li>span{flex:1;min-width:0;overflow-wrap:anywhere}
+.location-records>section{padding:12px 0;border-bottom:1px solid #e4e6df}
+.location-records>section strong{margin-right:auto;overflow-wrap:anywhere}
+.location-evidence{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.location-evidence button{max-width:100%;overflow-wrap:anywhere;text-align:left}
+.location-entry-form{border-top:1px solid #dcded8;margin-top:16px}
+.location-entry-fields label{display:grid;gap:5px;min-width:0}
+.location-entry-fields label:first-child{flex:1}
+.location-entry-form fieldset{margin:14px 0 0;border:1px solid #dcded8;border-radius:5px;min-width:0}
+.location-entry-form legend{font-size:12px}
+.location-entry-form input[type=search]{width:100%;font-size:13px}
+.location-note-options{max-height:180px;overflow:auto;margin-top:8px}
+.location-note-options label{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;overflow-wrap:anywhere}
+.location-note{padding:12px;background:#f3f5ef;border:1px solid #dcded8;border-radius:5px;margin-top:12px}
+.location-note p{white-space:pre-wrap;max-height:260px;overflow:auto}
+.location-note .list-heading h3{margin:0}

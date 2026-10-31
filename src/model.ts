@@ -1,7 +1,8 @@
+import { locationWords, validateLocations, remapLocations, type Locations } from './locations.ts';
 export const categories = ['未分類', 'ナンバー', '人物', '場所', 'アイテム', '時間', 'その他'];
 export type Note = { id: string; title?: string; text: string; createdAt: string };
 export type Link = { kind?: 'related' | 'identity'; id: string; a: string; b: string; status: 'tentative' | 'confirmed' };
-export type Data = { gameTitle?: string; draftTitle?: string; timeline?: Record<string, string | null>; registeredWords?: string[]; version: 5; notes: Note[]; categories: Record<string, string>; draft: string; categoryOrder: string[]; keywordOrder: string[]; collapsed: string[]; noteOrder: string[]; links: Link[] };
+export type Data = { locations?: Locations; gameTitle?: string; draftTitle?: string; timeline?: Record<string, string | null>; registeredWords?: string[]; version: 5; notes: Note[]; categories: Record<string, string>; draft: string; categoryOrder: string[]; keywordOrder: string[]; collapsed: string[]; noteOrder: string[]; links: Link[] };
 export const emptyData: Data = { version: 5, notes: [], categories: {}, draft: '', categoryOrder: [...categories], keywordOrder: [], collapsed: [], noteOrder: [], links: [] };
 export function keywords(text: string): string[] {
   return [...new Set([...text.matchAll(/(?:^|\s)\*([^\s*]+)/gu)].map(match => match[1]))];
@@ -52,7 +53,8 @@ export function validateData(value: unknown): Data {
     if (pairs.has(pair)) throw new Error('結びが重複しています。');
     pairs.add(pair); linkIds.add(link.id);
   }
-  return { ...(data.draftTitle !== undefined ? { draftTitle: data.draftTitle } : {}), ...(data.gameTitle !== undefined ? { gameTitle: data.gameTitle } : {}), ...(data.timeline !== undefined ? { timeline: data.timeline } : {}), ...(data.registeredWords !== undefined ? { registeredWords: data.registeredWords } : {}), version: 5, notes: data.notes, categories: Object.fromEntries(Object.entries(data.categories)), draft: data.draft, categoryOrder: order, keywordOrder: legacy ? [] : data.keywordOrder, collapsed: legacy ? [] : data.collapsed, noteOrder: data.noteOrder ?? [], links };
+  const locations = data.locations !== undefined ? validateLocations(data.locations, ids) : undefined;
+  return { ...(locations ? {locations} : {}), ...(data.draftTitle !== undefined ? { draftTitle: data.draftTitle } : {}), ...(data.gameTitle !== undefined ? { gameTitle: data.gameTitle } : {}), ...(data.timeline !== undefined ? { timeline: data.timeline } : {}), ...(data.registeredWords !== undefined ? { registeredWords: data.registeredWords } : {}), version: 5, notes: data.notes, categories: Object.fromEntries(Object.entries(data.categories)), draft: data.draft, categoryOrder: order, keywordOrder: legacy ? [] : data.keywordOrder, collapsed: legacy ? [] : data.collapsed, noteOrder: data.noteOrder ?? [], links };
 }
 
 export function backupFilename(data: Data, date = new Date()): string {
@@ -103,10 +105,11 @@ export function replaceKeyword(text: string, word: string, next: string): string
 export function renameKeyword(data: Data, word: string, next: string): Data {
   if (!next || /[\s*]/u.test(next)) throw new Error('名前に空白や * は使えません。');
   if (next === word) throw new Error('新しい名前を入力してください。');
-  const registered = new Set([...data.notes.flatMap(note => keywords(note.text)), ...keywords(data.draft), ...(data.registeredWords ?? []), ...Object.keys(data.categories), ...data.keywordOrder, ...data.links.flatMap(link => [link.a, link.b])]);
+  const registered = new Set([...data.notes.flatMap(note => keywords(note.text)), ...keywords(data.draft), ...(data.registeredWords ?? []), ...Object.keys(data.categories), ...data.keywordOrder, ...data.links.flatMap(link => [link.a, link.b]), ...locationWords(data.locations)]);
   if (registered.has(next)) throw new Error('登録済みの名前です。別の名前を入力してください。');
   if (!registered.has(word)) throw new Error('変更するキーワードが見つかりません。');
   return { ...data,
+    ...(data.locations ? {locations:remapLocations(data.locations,word,next)} : {}),
     ...(data.registeredWords ? { registeredWords: data.registeredWords.map(item => item === word ? next : item) } : {}),
     notes: data.notes.map(note => ({ ...note, text: replaceKeyword(note.text, word, next) })),
     draft: replaceKeyword(data.draft, word, next),
@@ -118,6 +121,7 @@ export function renameKeyword(data: Data, word: string, next: string): Data {
 
 export function keywordCounts(data: Data): Map<string, number> {
   const counts = new Map((data.registeredWords ?? []).map(word => [word, 0]));
+  locationWords(data.locations).forEach(word=>{if(!counts.has(word))counts.set(word,0);});
   data.notes.forEach(note => keywords(note.text).forEach(word => counts.set(word, (counts.get(word) ?? 0) + 1)));
   return counts;
 }
@@ -140,7 +144,7 @@ export function sortCategory(data: Data, category: string): Data {
 }
 export function numberCandidates(data: Data, start: number, end: number, prefix: '' | '#' = ''): { added: string[]; skipped: number } {
   if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end < start || end - start >= 1000) throw new Error('0以上の整数で、開始から終了まで1000個以内を指定してください。');
-  const existing = new Set([...keywordCounts(data).keys(), ...keywords(data.draft), ...Object.keys(data.categories), ...data.keywordOrder, ...data.links.flatMap(link => [link.a, link.b])]);
+  const existing = new Set([...keywordCounts(data).keys(), ...keywords(data.draft), ...Object.keys(data.categories), ...data.keywordOrder, ...data.links.flatMap(link => [link.a, link.b]), ...locationWords(data.locations)]);
   const range = Array.from({length: end - start + 1}, (_, i) => prefix + String(start + i));
   return { added: range.filter(word => !existing.has(word)), skipped: range.filter(word => existing.has(word)).length };
 }
@@ -203,7 +207,7 @@ export function mergeKeywords(data: Data, from: string, to: string, category: st
  assertIdentityPairs(links);
  const categories=Object.fromEntries([...Object.entries(data.categories).filter(([key])=>key!==from),[to,category]]);
  const order=data.keywordOrder.includes(to)?data.keywordOrder.filter(item=>item!==from):data.keywordOrder.map(word);
- return {...data,notes:data.notes.map(note=>({...note,text:replaceKeyword(note.text,from,to)})),draft:replaceKeyword(data.draft,from,to),categories,keywordOrder:[...new Set(order)],registeredWords:[...new Set((data.registeredWords??[]).map(word))],links};
+ return {...data,...(data.locations ? {locations:remapLocations(data.locations,from,to)} : {}),notes:data.notes.map(note=>({...note,text:replaceKeyword(note.text,from,to)})),draft:replaceKeyword(data.draft,from,to),categories,keywordOrder:[...new Set(order)],registeredWords:[...new Set((data.registeredWords??[]).map(word))],links};
 }
 
 export function mergeCandidates(data: Data, source: string, search = ''): string[] {
