@@ -3,7 +3,7 @@ import { freshData, keywordCounts, validateData, type Data } from './model';
 import './DataManagement.css';
 
 function Counts({data}: {data: Data}) {
-  return <dl className="data-counts"><div><dt>メモ</dt><dd>{data.notes.length}件</dd></div><div><dt>キーワード</dt><dd>{keywordCounts(data).size}個</dd></div><div><dt>つながり</dt><dd>{data.links.length}件</dd></div><div><dt>タイムライン</dt><dd>{Object.keys(data.timeline ?? {}).length}件</dd></div></dl>;
+  return <dl className="data-counts"><div><dt>メモ</dt><dd>{data.notes.length}件</dd></div><div><dt>キーワード</dt><dd>{keywordCounts(data).size}個</dd></div><div><dt>つながり</dt><dd>{data.links.length}件</dd></div><div><dt>タイムライン</dt><dd>{Object.keys(data.timeline ?? {}).length}件</dd></div><div><dt>居場所の記録</dt><dd>{data.locations?.entries.length ?? 0}件</dd></div></dl>;
 }
 type Props = {
   data: Data; update: (update: (previous: Data) => Data) => void;
@@ -38,7 +38,7 @@ export function DataManagement({data,update,backup,apply,close,busy}: Props) {
       <div className="data-actions"><button disabled={disabled} onClick={backup}>バックアップを保存</button><button disabled={disabled} onClick={()=>file.current?.click()}>バックアップから復元</button></div>
       <div className="data-danger"><p>次のゲームを始めるときは、データを消去して初期状態に戻せます。</p><button disabled={disabled} onClick={()=>{setMode('clear');setError('');}}>すべてのデータを消去</button></div>
     </> : <>
-      <p>{mode==='clear'?'ゲームタイトル・メモ・キーワード・分類・つながり・タイムライン・下書きをすべて消去し、分類を初期状態に戻します。':'現在のデータを、ゲームタイトルを含めてバックアップの内容で置き換えます。追加ではありません。'}</p>
+      <p>{mode==='clear'?'ゲームタイトル・メモ・キーワード・分類・つながり・タイムライン・居場所整理・下書きをすべて消去し、分類を初期状態に戻します。':'現在のデータを、ゲームタイトルを含めてバックアップの内容で置き換えます。追加ではありません。'}</p>
       <p className="muted">編集中の未保存の文章も破棄されます。実行前に現在のバックアップを保存できます。</p>
       <h3>現在のデータ</h3><p className="backup-game-title">{data.gameTitle?.trim() || 'タイトル未設定'}</p><Counts data={data}/>
       {mode==='restore' && imported && <><h3>復元するデータ</h3><p className="backup-game-title">{imported.data.gameTitle?.trim() || 'タイトル未設定'}</p><p className="backup-filename">{imported.name}</p><Counts data={imported.data}/></>}
