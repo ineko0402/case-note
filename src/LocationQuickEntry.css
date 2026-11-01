@@ -1,0 +1,26 @@
+.location-quick-dialog{max-width:720px}
+.location-place-controls,.location-evidence-filters,.location-quick-status{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0}
+.location-place-controls label,.location-evidence-filters label,.location-quick-status label{display:flex;align-items:center;gap:6px;font-size:12px}
+.location-place-controls select,.location-evidence-filters select,.location-quick-status select{padding:5px 8px;font-size:13px;min-width:0}
+.location-place-controls .search-field,.location-evidence-filters .search-field{flex:1;min-width:140px}
+.location-place-controls input,.location-evidence-filters input{width:100%}
+.location-place-buttons{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:12px 0 18px}
+.location-place-buttons>button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:54px;padding:10px;overflow-wrap:anywhere;text-align:center}
+.location-place-buttons>button[aria-pressed=true],.location-existing-records button[aria-pressed=true]{background:#eaf0e3;border-color:#819775}
+.location-place-buttons small{font-size:12px}
+.location-quick-evidence,.location-quick-details{border-top:1px solid #dce1d5;padding-top:10px;margin-top:12px}
+.location-quick-dialog summary{cursor:pointer;font-size:13px}
+.location-selected-evidence{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.location-selected-evidence>div{display:flex;min-width:0;max-width:100%}
+.location-selected-evidence button{font-size:12px;overflow-wrap:anywhere;text-align:left}
+.location-selected-evidence button:first-child{min-width:0}
+.location-selected-evidence button:last-child{flex:none}
+.location-evidence-filters>span{font-size:12px;color:#606b59}
+.location-evidence-candidates{display:grid;gap:8px;max-height:300px;overflow:auto}
+.location-evidence-candidates article{padding:10px}
+.location-evidence-candidates label{display:flex;gap:8px;align-items:center;font-size:13px;overflow-wrap:anywhere}
+.location-evidence-candidates input[type=checkbox]{width:18px;height:18px;flex:none}
+.location-evidence-candidates details{margin:6px 0 0 26px}
+.location-evidence-candidates details>p{white-space:pre-wrap;overflow-wrap:anywhere;margin-top:6px;max-height:200px;overflow:auto}
+.location-existing-records{display:grid;gap:6px;margin-top:10px}
+.location-existing-records>div{display:flex;gap:6px;flex-wrap:wrap}

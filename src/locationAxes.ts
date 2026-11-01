@@ -1,3 +1,4 @@
+import { orderedLocationPeople, sortLocationPeople } from './locationPeople.ts';
 import { completeOrder, keywordCounts, personWords, type Data } from './model.ts';
 import { emptyLocations } from './locations.ts';
 
@@ -14,7 +15,8 @@ export function locationPersonCandidates(data:Data):PersonCandidate[] {
     const rows=existing.filter(person=>members.includes(person));
     result.push({word:rows[0] ?? members[0],members,categories:[...new Set(members.map(member=>data.categories[member]??'未分類'))],existing:rows});
   }
-  return result;
+  const orderPeople=sortLocationPeople(data,result.map(item=>item.word));
+  return orderPeople.map(word=>result.find(item=>item.word === word)!);
 }
 export function locationTimeKeywords(data:Data):string[] {
   return completeOrder(data.keywordOrder,[...keywordCounts(data).keys()]).filter(word=>data.categories[word] === '時間');
@@ -46,7 +48,7 @@ export function addLocationAxes(data:Data,people:string[],labels:string[],transp
     const id=makeId();if(!id || ids.has(id))throw new Error('時間のIDが重複しました。もう一度お試しください。');
     times.push({id,label});known.add(label);ids.add(id);
   }
-  return {...data,locations:{...locations,people:nextPeople,times,transposed}};
+  return {...data,locations:{...locations,people:orderedLocationPeople(data,nextPeople),times,transposed}};
 }
 export function locationCoordinates(row:string,column:string,transposed:boolean):{person:string;timeId:string} {
   return transposed?{person:column,timeId:row}:{person:row,timeId:column};
