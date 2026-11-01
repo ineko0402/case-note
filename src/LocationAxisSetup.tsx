@@ -1,3 +1,4 @@
+import { orderedLocationPeople } from './locationPeople';
 import { useEffect, useRef, useState } from 'react';
 import type { Data } from './model';
 import { emptyLocations, type Locations } from './locations';
@@ -10,6 +11,7 @@ export function LocationAxisSetup({data,update,close}:Props) {
   const dialog=useRef<HTMLDialogElement>(null);
   useEffect(()=>{const element=dialog.current!;element.showModal();return ()=>element.close();},[]);
   const locations=data.locations ?? emptyLocations();
+  const orderedPeople=orderedLocationPeople(data,locations.people);
   const candidates=locationPersonCandidates(data);
   const [category,setCategory]=useState(candidates.some(item=>item.categories.some(category=>['人物','ナンバー'].includes(category)))?'人物・ナンバー':'');
   const [checkedPeople,setCheckedPeople]=useState<string[]>([]);
@@ -52,7 +54,7 @@ export function LocationAxisSetup({data,update,close}:Props) {
       </div>
       <section className="location-axis-preview" aria-label="追加後の表"><div className="location-axis-title"><h3>追加後の表</h3><span>人物 {preview.people.length} × 時間 {preview.times.length}</span><button type="button" aria-pressed={transposed} onClick={()=>setTransposed(value=>!value)}>行列を入れ替え</button></div><div className="location-axis-preview-scroll"><LocationGrid locations={preview} transposed={transposed} addedPeople={addedPeople} addedTimes={addedTimes} preview/></div></section>
       {(locations.people.length>0 || locations.times.length>0) && <details className="location-axis-existing"><summary>並べ替え・削除</summary>
-        <h3>人物</h3><ul className="location-axis-list">{locations.people.map((person,index)=><li key={person}><span>*{person}</span><button type="button" aria-label={`${person}を前へ`} disabled={index===0} onClick={()=>applyExisting({...locations,people:move(locations.people,index,-1)})}>↑</button><button type="button" aria-label={`${person}を後へ`} disabled={index===locations.people.length-1} onClick={()=>applyExisting({...locations,people:move(locations.people,index,1)})}>↓</button><button type="button" onClick={()=>{if(locations.entries.some(entry=>entry.person === person) && !window.confirm(`「${person}」とその居場所記録を表から削除しますか？`))return;applyExisting({...locations,people:locations.people.filter(item=>item !== person),entries:locations.entries.filter(entry=>entry.person !== person)});}}>削除</button></li>)}</ul>
+        <h3>人物 <button type="button" disabled={!locations.manualPeopleOrder} onClick={()=>applyExisting({...locations,manualPeopleOrder:false})}>番号順</button></h3><ul className="location-axis-list">{orderedPeople.map((person,index)=><li key={person}><span>*{person}</span><button type="button" aria-label={`${person}を前へ`} disabled={index===0} onClick={()=>applyExisting({...locations,people:move(orderedPeople,index,-1),manualPeopleOrder:true})}>↑</button><button type="button" aria-label={`${person}を後へ`} disabled={index===locations.people.length-1} onClick={()=>applyExisting({...locations,people:move(orderedPeople,index,1),manualPeopleOrder:true})}>↓</button><button type="button" onClick={()=>{if(locations.entries.some(entry=>entry.person === person) && !window.confirm(`「${person}」とその居場所記録を表から削除しますか？`))return;applyExisting({...locations,people:locations.people.filter(item=>item !== person),entries:locations.entries.filter(entry=>entry.person !== person)});}}>削除</button></li>)}</ul>
         <h3>時間</h3><ul className="location-axis-list">{locations.times.map((time,index)=><li key={time.id}><span>{time.label}</span><button type="button" aria-label={`${time.label}を前へ`} disabled={index===0} onClick={()=>applyExisting({...locations,times:move(locations.times,index,-1)})}>↑</button><button type="button" aria-label={`${time.label}を後へ`} disabled={index===locations.times.length-1} onClick={()=>applyExisting({...locations,times:move(locations.times,index,1)})}>↓</button><button type="button" onClick={()=>{if(locations.entries.some(entry=>entry.timeId === time.id) && !window.confirm(`「${time.label}」とその居場所記録を表から削除しますか？`))return;applyExisting({...locations,times:locations.times.filter(item=>item.id !== time.id),entries:locations.entries.filter(entry=>entry.timeId !== time.id)});}}>削除</button></li>)}</ul>
       </details>}
     </div>

@@ -1,7 +1,7 @@
 import type { Data } from './model';
 
 export type LocationEntry = { id: string; person: string; timeId: string; place: string; status: 'tentative' | 'confirmed'; noteIds: string[] };
-export type Locations = { transposed?: boolean; people: string[]; times: {id: string; label: string}[]; entries: LocationEntry[] };
+export type Locations = { transposed?: boolean; manualPeopleOrder?: boolean; people: string[]; times: {id: string; label: string}[]; entries: LocationEntry[] };
 export const emptyLocations = (): Locations => ({people: [], times: [], entries: []});
 export function locationWords(locations?: Locations): string[] {
   return [...new Set([...(locations?.people ?? []), ...(locations?.entries.map(entry=>entry.place) ?? [])])];
@@ -10,6 +10,7 @@ export function validateLocations(value: unknown, noteIds: Set<string>): Locatio
   const fail = (): never => { throw new Error('居場所整理の形式が違います。'); };
   if (!value || typeof value !== 'object') return fail();
   const data = value as Locations;
+  if(data.manualPeopleOrder !== undefined && typeof data.manualPeopleOrder !== 'boolean')return fail();
   if(data.transposed !== undefined && typeof data.transposed !== 'boolean')return fail();
   const word = (value: unknown): value is string => typeof value === 'string' && !!value && !/[\s*]/u.test(value);
   if (!Array.isArray(data.people) || !data.people.every(word) || new Set(data.people).size !== data.people.length || !Array.isArray(data.times) || !Array.isArray(data.entries)) return fail();
@@ -23,7 +24,7 @@ export function validateLocations(value: unknown, noteIds: Set<string>): Locatio
     const key=JSON.stringify([entry.person,entry.timeId,entry.place]); if(cells.has(key))return fail();
     ids.add(entry.id);cells.add(key);
   }
-  return {...(data.transposed !== undefined ? {transposed:data.transposed} : {}),people:[...data.people],times:data.times.map(time=>({...time})),entries:data.entries.map(entry=>({...entry,noteIds:[...entry.noteIds]}))};
+  return {...(data.manualPeopleOrder !== undefined ? {manualPeopleOrder:data.manualPeopleOrder} : {}),...(data.transposed !== undefined ? {transposed:data.transposed} : {}),people:[...data.people],times:data.times.map(time=>({...time})),entries:data.entries.map(entry=>({...entry,noteIds:[...entry.noteIds]}))};
 }
 export function locationCell(locations: Locations, person: string, timeId: string) {
   const entries=locations.entries.filter(entry=>entry.person === person && entry.timeId === timeId);
